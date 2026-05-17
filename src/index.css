@@ -4,6 +4,10 @@
   box-sizing: border-box;
 }
 
+html {
+  overflow-x: clip;
+}
+
 body {
   margin: 0;
   font-family:
@@ -17,8 +21,10 @@ body {
     sans-serif;
   color: #0f172a;
   background: #f1f5f9;
+  overflow-x: clip;
 }
 
 #root {
   min-height: 100vh;
+  overflow-x: clip;
 }

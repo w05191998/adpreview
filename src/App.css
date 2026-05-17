@@ -1,12 +1,17 @@
 .app-shell {
   display: grid;
-  grid-template-columns: minmax(360px, 480px) 1fr;
+  grid-template-columns: minmax(0, 480px) 1fr;
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 .builder-panel,
 .preview-panel {
   padding: 1.5rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .builder-panel {
@@ -132,6 +137,9 @@
   font-weight: 500;
   padding: 0.64rem 0.72rem;
   outline: none;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease;
@@ -174,14 +182,17 @@
 
 .preview-layout {
   display: grid;
-  grid-template-columns: minmax(360px, 430px) minmax(280px, 360px);
+  grid-template-columns: minmax(0, 430px) minmax(0, 360px);
   gap: 1.25rem;
   align-items: start;
+  width: 100%;
+  max-width: 100%;
 }
 
 .feed-preview {
   width: 100%;
-  max-width: 420px;
+  max-width: min(420px, 100%);
+  min-width: 0;
   border: 1px solid #dddfe2;
   border-radius: 8px;
   background: #fff;
@@ -252,6 +263,8 @@
   line-height: 1.2;
   color: #1c1e21;
   font-weight: 700;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .feed-preview span {
@@ -267,6 +280,8 @@
   color: #1c1e21;
   font-size: 0.94rem;
   line-height: 1.34;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .primary-copy p {
@@ -410,10 +425,23 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.9rem;
   padding: 0.75rem;
   border-top: 1px solid #dddfe2;
   background: #f7f8fa;
+}
+
+.feed-preview footer > div:first-child {
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+
+.feed-preview footer h4,
+.feed-preview footer p,
+.feed-preview footer small {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .feed-preview footer small {
@@ -530,7 +558,8 @@
 
 .story-phone {
   width: 100%;
-  max-width: 320px;
+  max-width: min(320px, 100%);
+  min-width: 0;
   border: 1px solid #dddfe2;
   border-radius: 14px;
   overflow: hidden;
@@ -592,6 +621,9 @@
   margin: 0;
   font-size: 0.8rem;
   color: #1c1e21;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .preview-stack {
@@ -601,7 +633,8 @@
 
 .reels-phone {
   width: 100%;
-  max-width: 320px;
+  max-width: min(320px, 100%);
+  min-width: 0;
   border: 1px solid #dddfe2;
   border-radius: 14px;
   overflow: hidden;
@@ -640,18 +673,26 @@
   font-size: 0.84rem;
 }
 
+.reels-meta {
+  flex: 1;
+  min-width: 0;
+}
+
 .reels-meta p {
   margin: 0.2rem 0 0;
   color: #4b5563;
   font-size: 0.76rem;
   line-height: 1.3;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .ratio-preview-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.6rem;
-  max-width: 320px;
+  width: 100%;
+  max-width: min(320px, 100%);
 }
 
 .ratio-item {
@@ -678,7 +719,7 @@
 
 @media (max-width: 1024px) {
   .app-shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .builder-panel {
@@ -687,14 +728,82 @@
   }
 
   .preview-layout {
-    grid-template-columns: 1fr;
-    justify-items: center;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: stretch;
   }
 
+  .feed-preview,
+  .story-phone,
+  .reels-phone,
+  .ratio-preview-grid {
+    margin-inline: auto;
+  }
 }
 
 @media (max-width: 640px) {
+  .builder-panel,
+  .preview-panel {
+    padding: 1rem;
+  }
+
+  .panel-header h1 {
+    font-size: 1.3rem;
+  }
+
   .form-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .form-section {
+    padding: 0.75rem;
+  }
+
+  .feed-preview footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .feed-preview footer .cta-button {
+    width: 100%;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .story-copy {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .story-copy .cta-button {
+    width: 100%;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .reels-overlay {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reels-overlay .cta-button {
+    width: 100%;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .fb-engagement-action {
+    font-size: 0.72rem;
+    gap: 0.2rem;
+    padding-inline: 0.1rem;
+  }
+
+  .fb-engagement-action span {
+    display: none;
+  }
+
+  .fb-engagement-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    font-size: 1.25rem;
   }
 }
