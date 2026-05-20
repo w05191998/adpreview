@@ -12,6 +12,8 @@ import {
   readSession,
   writeAdminSession,
 } from './clientConfig'
+import FieldCharCounter from './FieldCharCounter'
+import { META_AD_HARD_LIMITS } from './metaAdLimits'
 import './App.css'
 
 const CREATIVE_TYPE = {
@@ -1098,34 +1100,49 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
           <section className="form-section">
             <div className="section-heading">
               <h3>Ad Copy</h3>
-              <p>Write the copy users see in the feed placement.</p>
+              <p>
+                Write the copy users see in the feed placement. Counters show Meta&apos;s
+                maximum input limits (not recommended display lengths).
+              </p>
             </div>
             <div className="form-grid">
               <label className="full-width">
-                Primary Text
+                <span className="field-label-row">
+                  <span>Primary Text</span>
+                  <FieldCharCounter fieldKey="primaryText" value={form.primaryText} />
+                </span>
                 <textarea
                   name="primaryText"
                   value={form.primaryText}
                   onChange={handleInputChange}
                   rows="16"
+                  maxLength={META_AD_HARD_LIMITS.primaryText.max}
                 />
               </label>
 
               <label>
-                Headline
+                <span className="field-label-row">
+                  <span>Headline</span>
+                  <FieldCharCounter fieldKey="headline" value={form.headline} />
+                </span>
                 <input
                   name="headline"
                   value={form.headline}
                   onChange={handleInputChange}
+                  maxLength={META_AD_HARD_LIMITS.headline.max}
                 />
               </label>
 
               <label>
-                Description (optional)
+                <span className="field-label-row">
+                  <span>Description (optional)</span>
+                  <FieldCharCounter fieldKey="description" value={form.description} />
+                </span>
                 <input
                   name="description"
                   value={form.description}
                   onChange={handleInputChange}
+                  maxLength={META_AD_HARD_LIMITS.description.max}
                 />
               </label>
 

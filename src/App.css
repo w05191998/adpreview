@@ -318,6 +318,25 @@
   font-weight: 600;
 }
 
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.field-char-count {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.field-char-count--at-limit {
+  color: #b45309;
+}
+
 .form-grid input,
 .form-grid textarea,
 .form-grid select {

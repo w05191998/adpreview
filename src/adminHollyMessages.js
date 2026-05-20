@@ -25,7 +25,6 @@ const DAY_MESSAGES = [
   '💡 Fun fact: Reading this loading message just burned exactly 0.5 calories. Athletic.',
   '💡 Fun fact: If you wait long enough, it will be tomorrow.',
   '💡 Fun fact: You are currently the youngest you will ever be for the rest of your life.',
-  '💡 Fun fact: "WFH" is just "WTF" but with a bit more hope.',
   '💡 Fun fact: Water is wet. You are tired. Drink water ah diu.',
   '🌪️ Another day, another chur. U got this.',
   '🚰 Stop staring at the screen and drink some water first ah.',
