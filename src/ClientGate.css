@@ -56,10 +56,17 @@
   color: var(--color-text, #0f172a);
 }
 
+.client-gate-password {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
 .client-gate-input {
+  width: 100%;
   border: 1px solid var(--color-border, #cbd5e1);
   border-radius: 10px;
-  padding: 0.7rem 0.8rem;
+  padding: 0.7rem 4.25rem 0.7rem 0.8rem;
   font-size: 0.95rem;
   font-family: var(--font-body, system-ui, sans-serif);
   color: var(--color-text, #0f172a);
@@ -67,6 +74,35 @@
   transition:
     border-color 0.18s ease,
     box-shadow 0.18s ease;
+}
+
+.client-gate-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.45rem;
+  transform: translateY(-50%);
+  border: none;
+  border-radius: 6px;
+  padding: 0.35rem 0.55rem;
+  background: transparent;
+  color: var(--color-text-muted, #64748b);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: var(--font-body, system-ui, sans-serif);
+  cursor: pointer;
+  transition:
+    color 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.client-gate-password-toggle:hover {
+  color: #1877f2;
+  background: rgb(24 119 242 / 8%);
+}
+
+.client-gate-password-toggle:focus-visible {
+  outline: 2px solid rgb(24 119 242 / 35%);
+  outline-offset: 1px;
 }
 
 .client-gate-input:focus {
@@ -110,6 +146,31 @@
 .client-gate-submit:disabled {
   opacity: 0.7;
   cursor: wait;
+}
+
+.client-gate-admin-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.85rem;
+  width: min(100%, 420px);
+}
+
+.client-gate-admin-stack .client-gate-card {
+  width: 100%;
+}
+
+.holly-surprise-message {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px dashed rgb(24 119 242 / 28%);
+  background: rgb(255 255 255 / 88%);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #475569;
+  text-align: center;
 }
 
 .client-gate-admin-label {

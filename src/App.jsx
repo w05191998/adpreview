@@ -1356,9 +1356,10 @@ function App() {
   if (session.kind === 'admin' && !session.activeClient) {
     return (
       <AdminClientPicker
+        adminProfile={session.adminProfile}
         onSelectClient={(client) => {
-          writeAdminSession(client.id)
-          setSession({ kind: 'admin', activeClient: client })
+          writeAdminSession(client.id, session.adminProfile)
+          setSession({ kind: 'admin', adminProfile: session.adminProfile, activeClient: client })
         }}
         onLogout={handleLogout}
       />
@@ -1370,8 +1371,12 @@ function App() {
 
   const handleSwitchClient = (client) => {
     if (isAdmin) {
-      writeAdminSession(client.id)
-      setSession({ kind: 'admin', activeClient: client })
+      writeAdminSession(client.id, session.adminProfile)
+      setSession({
+        kind: 'admin',
+        adminProfile: session.adminProfile,
+        activeClient: client,
+      })
     }
   }
 

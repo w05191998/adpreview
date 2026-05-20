@@ -4,6 +4,7 @@ import './ClientGate.css'
 
 export default function ClientGate({ onAuthenticated }) {
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -20,8 +21,8 @@ export default function ClientGate({ onAuthenticated }) {
     }
 
     if (result.kind === 'admin') {
-      writeAdminSession()
-      onAuthenticated({ kind: 'admin', activeClient: null })
+      writeAdminSession(null, result.adminProfile)
+      onAuthenticated({ kind: 'admin', adminProfile: result.adminProfile, activeClient: null })
     } else {
       writeClientSession(result.client)
       onAuthenticated({ kind: 'client', client: result.client })
@@ -42,18 +43,29 @@ export default function ClientGate({ onAuthenticated }) {
           <label className="client-gate-label" htmlFor="client-access-code">
             Access code
           </label>
-          <input
-            id="client-access-code"
-            className="client-gate-input"
-            type="password"
-            name="accessCode"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Enter access code"
-            autoComplete="current-password"
-            autoFocus
-            required
-          />
+          <div className="client-gate-password">
+            <input
+              id="client-access-code"
+              className="client-gate-input"
+              type={showPassword ? 'text' : 'password'}
+              name="accessCode"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Enter access code"
+              autoComplete="current-password"
+              autoFocus
+              required
+            />
+            <button
+              type="button"
+              className="client-gate-password-toggle"
+              onClick={() => setShowPassword((visible) => !visible)}
+              aria-label={showPassword ? 'Hide access code' : 'Show access code'}
+              aria-pressed={showPassword}
+            >
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </div>
           {error ? (
             <p className="client-gate-error" role="alert">
               {error}

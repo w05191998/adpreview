@@ -62,7 +62,8 @@ readSession() in sessionStorage
 | Code (dev default) | Role | Behaviour |
 |--------------------|------|-----------|
 | `trinity` | Client | Loads **Trinity** presets only; draft key `adpreview-draft-trinity-v1` |
-| `adminholly` | Admin | Pick any client; switch client in header; Sign out |
+| `adminfabcom` | Admin (standard) | Pick any client; switch client in header; Sign out |
+| `adminholly` | Admin (Holly) | Same as admin; client picker only |
 
 Production passwords come from environment variables (see below). **Do not commit `.env`.**
 
@@ -178,7 +179,8 @@ Give the client **only** their access code and URL. They will not see other clie
 
 | Env variable | Dev default |
 |--------------|-------------|
-| `VITE_CLIENT_PASSWORD_ADMIN` | `adminholly` |
+| `VITE_CLIENT_PASSWORD_ADMIN` | `adminfabcom` |
+| `VITE_CLIENT_PASSWORD_ADMIN_HOLLY` | `adminholly` |
 
 Admins sign in → choose client → can switch client from the header dropdown. Each client’s drafts remain isolated by `clientId`.
 

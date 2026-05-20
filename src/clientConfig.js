@@ -46,27 +46,51 @@ function getExpectedPassword(clientId) {
   return ''
 }
 
-function getAdminPassword() {
-  const fromEnv = import.meta.env.VITE_CLIENT_PASSWORD_ADMIN
+const ADMIN_PROFILES = [
+  {
+    profile: 'holly',
+    envKey: 'VITE_CLIENT_PASSWORD_ADMIN_HOLLY',
+    devPassword: 'adminholly',
+  },
+  {
+    profile: 'standard',
+    envKey: 'VITE_CLIENT_PASSWORD_ADMIN',
+    devPassword: 'adminfabcom',
+  },
+]
+
+function getAdminPasswordForProfile({ envKey, devPassword }) {
+  const fromEnv = import.meta.env[envKey]
   if (typeof fromEnv === 'string' && fromEnv.length > 0) {
     return fromEnv
   }
   if (import.meta.env.DEV) {
-    return 'adminholly'
+    return devPassword
   }
   return ''
 }
 
-/** @returns {{ kind: 'admin' } | { kind: 'client', client: typeof CLIENTS.trinity } | null} */
+function resolveAdminProfile(password) {
+  const normalized = password.trim().toLowerCase()
+  for (const entry of ADMIN_PROFILES) {
+    const expected = getAdminPasswordForProfile(entry)
+    if (expected && normalized === expected.toLowerCase()) {
+      return entry.profile
+    }
+  }
+  return null
+}
+
+/** @returns {{ kind: 'admin', adminProfile: string } | { kind: 'client', client: typeof CLIENTS.trinity } | null} */
 export function authenticate(password) {
   const normalized = password.trim().toLowerCase()
   if (!normalized) {
     return null
   }
 
-  const adminPassword = getAdminPassword()
-  if (adminPassword && normalized === adminPassword.toLowerCase()) {
-    return { kind: 'admin' }
+  const adminProfile = resolveAdminProfile(password)
+  if (adminProfile) {
+    return { kind: 'admin', adminProfile }
   }
 
   for (const clientId of Object.keys(CLIENTS)) {
@@ -93,7 +117,11 @@ export function readSession() {
 
     if (parsed?.role === 'admin') {
       const activeClient = parsed.activeClientId ? CLIENTS[parsed.activeClientId] : null
-      return { kind: 'admin', activeClient: activeClient || null }
+      return {
+        kind: 'admin',
+        adminProfile: parsed.adminProfile || 'standard',
+        activeClient: activeClient || null,
+      }
     }
 
     const client = parsed?.clientId ? CLIENTS[parsed.clientId] : null
@@ -114,11 +142,12 @@ export function writeClientSession(client) {
   )
 }
 
-export function writeAdminSession(activeClientId = null) {
+export function writeAdminSession(activeClientId = null, adminProfile = 'standard') {
   window.sessionStorage.setItem(
     SESSION_KEY,
     JSON.stringify({
       role: 'admin',
+      adminProfile,
       activeClientId: activeClientId || null,
       at: Date.now(),
     }),
