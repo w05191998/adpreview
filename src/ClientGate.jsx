@@ -32,7 +32,7 @@ export default function ClientGate({ onAuthenticated }) {
   return (
     <div className="client-gate">
       <div className="client-gate-card">
-        <p className="client-gate-company">Fabcom</p>
+        <p className="client-gate-company">HOLLY@FABCOM</p>
         <h1 className="client-gate-title">Meta Ad Preview</h1>
         <p className="client-gate-lead">
           Enter your access code to load branded presets and preview Facebook &amp; Instagram
