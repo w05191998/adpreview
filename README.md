@@ -21,6 +21,10 @@ Then open the local URL shown in terminal (usually `http://localhost:5173`).
 - `npm run lint` - run ESLint
 - `npm run build` - create production build
 
+## Multi-client setup
+
+See **[docs/CLIENTS.md](docs/CLIENTS.md)** for project structure, authentication, and how to add a new client.
+
 ## Current scope
 
 This MVP is client-side only:

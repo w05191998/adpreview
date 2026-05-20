@@ -1,5 +1,17 @@
 import { WhatsAppOutlined } from '@ant-design/icons'
 import { useEffect, useRef, useState } from 'react'
+import AdminClientPicker from './AdminClientPicker'
+import ClientGate from './ClientGate'
+import {
+  CLIENTS,
+  buildDefaultForm,
+  clearClientSession,
+  getDraftStorageKey,
+  getInstagramHandle,
+  listClients,
+  readSession,
+  writeAdminSession,
+} from './clientConfig'
 import './App.css'
 
 const CREATIVE_TYPE = {
@@ -14,44 +26,6 @@ const MEDIA_RATIOS = [
   { key: '9:16', label: 'Story/Reel (9:16)', cssValue: '9 / 16' },
   { key: '1.91:1', label: 'Landscape (1.91:1)', cssValue: '1.91 / 1' },
 ]
-
-const DISPLAY_URL_OPTIONS = ['trinitymedical.com.hk']
-
-const TRINITY_PAGE_NAME = 'Trinity Medical Centre 全仁醫務中心'
-const TRINITY_AESTHETICS_PAGE_NAME = 'Trinity Medical Aesthetics 全仁醫學美容'
-const PAGE_NAME_OPTIONS = [TRINITY_PAGE_NAME, TRINITY_AESTHETICS_PAGE_NAME]
-
-const TRINITY_BRAND_LOGO = '/trinity-fb-brand-logo.png'
-
-const FB_BRAND_LOGOS = {
-  [TRINITY_PAGE_NAME]: TRINITY_BRAND_LOGO,
-  [TRINITY_AESTHETICS_PAGE_NAME]: '/trinity-aesthetics-logo.png',
-}
-
-const IG_BRAND_LOGOS = {
-  [TRINITY_PAGE_NAME]: TRINITY_BRAND_LOGO,
-  [TRINITY_AESTHETICS_PAGE_NAME]: '/trinity-aesthetics-logo.png',
-}
-
-const IG_DEFAULT_HANDLE = 'trinitymedicalhongkong'
-
-const IG_PAGE_HANDLES = {
-  [TRINITY_PAGE_NAME]: IG_DEFAULT_HANDLE,
-  [TRINITY_AESTHETICS_PAGE_NAME]: 'trinitymedicalaesthetics',
-}
-
-function getInstagramHandle(pageName) {
-  const normalizedName = pageName.trim()
-  if (!normalizedName) {
-    return IG_DEFAULT_HANDLE
-  }
-
-  if (IG_PAGE_HANDLES[normalizedName]) {
-    return IG_PAGE_HANDLES[normalizedName]
-  }
-
-  return IG_DEFAULT_HANDLE
-}
 
 function formatIgCtaLabel(label) {
   const trimmed = (label || '').trim()
@@ -101,16 +75,15 @@ const INITIAL_FORM = {
 
 const SHOW_SUBMIT_SECTION = false
 
-const STORAGE_KEY = 'adpreview-draft-v1'
 const MAX_STORED_MEDIA_BYTES = 3 * 1024 * 1024
 
-function readStoredDraft() {
+function readStoredDraft(storageKey) {
   if (typeof window === 'undefined') {
     return null
   }
 
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
+    const raw = window.localStorage.getItem(storageKey)
     if (!raw) {
       return null
     }
@@ -121,13 +94,13 @@ function readStoredDraft() {
   }
 }
 
-function writeStoredDraft(draft) {
+function writeStoredDraft(storageKey, draft) {
   if (typeof window === 'undefined') {
     return
   }
 
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(draft))
+    window.localStorage.setItem(storageKey, JSON.stringify(draft))
   } catch {
     // Ignore quota or privacy errors.
   }
@@ -403,7 +376,7 @@ function IgCtaStrip({ label }) {
   )
 }
 
-function PageAvatar({ pageName, brandLogos = FB_BRAND_LOGOS, defaultLogoUrl = '' }) {
+function PageAvatar({ pageName, brandLogos, defaultLogoUrl = '' }) {
   const normalizedName = pageName.trim()
   const logoUrl = brandLogos[normalizedName] || defaultLogoUrl
   const altLabel = normalizedName || 'Trinity Medical Centre'
@@ -721,13 +694,17 @@ function createSingleMediaStateFromDraft(draft) {
   }
 }
 
-function App() {
+function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
+  const storageKey = getDraftStorageKey(client.id)
   const isDesktopLayout = useDesktopLayout()
-  const [initialDraft] = useState(() => readStoredDraft())
+  const [initialDraft] = useState(() => readStoredDraft(storageKey))
   const [initialSingleMedia] = useState(() => createSingleMediaStateFromDraft(initialDraft))
   const singlePreviewUrlRef = useRef('')
   const carouselItemsRef = useRef([])
-  const [form, setForm] = useState(() => hydrateForm(initialDraft?.form))
+  const [form, setForm] = useState(() => ({
+    ...buildDefaultForm(client),
+    ...hydrateForm(initialDraft?.form),
+  }))
   const [creativeType, setCreativeType] = useState(() => getInitialCreativeType(initialDraft))
   const [mediaRatio, setMediaRatio] = useState(() => getInitialMediaRatio(initialDraft))
   const [singleMediaFile, setSingleMediaFile] = useState(() => initialSingleMedia.file)
@@ -763,7 +740,7 @@ function App() {
         return
       }
 
-      writeStoredDraft({
+      writeStoredDraft(storageKey, {
         form,
         creativeType,
         mediaRatioKey: mediaRatio.key,
@@ -780,6 +757,7 @@ function App() {
       cancelled = true
     }
   }, [
+    storageKey,
     form,
     creativeType,
     mediaRatio.key,
@@ -943,7 +921,7 @@ function App() {
   const displayUrl = form.displayUrl.trim()
   const ctaLabel = form.ctaLabel.trim()
   const pageName = form.pageName.trim()
-  const instagramHandle = getInstagramHandle(pageName)
+  const instagramHandle = getInstagramHandle(pageName, client)
   const footerLinkLabel = ctaLabel === WHATSAPP_CTA_LABEL ? 'WHATSAPP' : displayUrl
   const renderMedia = (ratioCssValue) => {
     const mediaStyle = { '--media-ratio': ratioCssValue }
@@ -1023,9 +1001,46 @@ function App() {
   return (
     <main className="app-shell">
       <section className="builder-panel">
-        <div className="panel-header">
-          <h1>Meta Ad Creative Preview</h1>
-          <p>Upload ad materials and preview Facebook and Instagram feed placements.</p>
+        <div className="panel-header panel-header--compact">
+          {client.brandLogo ? (
+            <img
+              className="panel-client-logo"
+              src={client.brandLogo}
+              alt={`${client.label} logo`}
+            />
+          ) : null}
+          <h1 className="panel-header-title">Meta Ad Preview</h1>
+          <div className="panel-header-actions">
+            {isAdmin ? (
+              <>
+                <label className="panel-admin-client">
+                  <span className="panel-admin-client-label">Client</span>
+                  <select
+                    className="panel-admin-client-select"
+                    value={client.id}
+                    onChange={(event) => onSwitchClient(CLIENTS[event.target.value])}
+                  >
+                    {listClients().map((entry) => (
+                      <option key={entry.id} value={entry.id}>
+                        {entry.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="panel-admin-badge">Admin</span>
+                </label>
+                <button type="button" className="panel-logout" onClick={onLogout}>
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="panel-client-badge">{client.label}</span>
+                <button type="button" className="panel-logout" onClick={onLogout}>
+                  Sign out
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="form-shell">
@@ -1039,7 +1054,7 @@ function App() {
                 Page Name
                 <select name="pageName" value={form.pageName} onChange={handleInputChange}>
                   <option value="">Select page name</option>
-                  {PAGE_NAME_OPTIONS.map((option) => (
+                  {client.pageNames.map((option) => (
                     <option key={option} value={option}>
                       {option}
                     </option>
@@ -1062,7 +1077,7 @@ function App() {
                   name="destinationUrl"
                   value={form.destinationUrl}
                   onChange={handleInputChange}
-                  placeholder="https://trinitymedical.com.hk/zh/e-shop/"
+                  placeholder={client.defaultDestinationUrl}
                 />
               </label>
 
@@ -1070,7 +1085,7 @@ function App() {
                 Display URL
                 <select name="displayUrl" value={form.displayUrl} onChange={handleInputChange}>
                   <option value="">Select display URL</option>
-                  {DISPLAY_URL_OPTIONS.map((option) => (
+                  {client.displayUrls.map((option) => (
                     <option key={option} value={option}>
                       {option}
                     </option>
@@ -1224,13 +1239,28 @@ function App() {
       </section>
 
       <section className="preview-panel">
+        <header className="preview-panel-header">
+          <h2 className="preview-panel-title">Live placements</h2>
+          <p className="preview-panel-desc">
+            Feed mocks update live as you edit copy and creative.
+          </p>
+        </header>
+
         <div className="preview-placements">
-          <div className="placement-block">
-            <h2>Facebook Feed Placement</h2>
-            <div className="preview-layout">
+          <div className="placement-block placement-block--facebook">
+            <div className="placement-heading">
+              <span className="platform-pill platform-pill--facebook">Facebook</span>
+              <h3 className="placement-title">Feed placement</h3>
+            </div>
+            <p className="placement-spec">Meta mobile feed · 402px column width</p>
+            <div className="preview-layout preview-layout--stage preview-layout--facebook">
               <article className="feed-preview fb-card">
                 <header className="fb-header">
-                  <PageAvatar pageName={pageName} />
+                  <PageAvatar
+                    pageName={pageName}
+                    brandLogos={client.fbBrandLogos}
+                    defaultLogoUrl={client.brandLogo}
+                  />
                   <div>
                     {pageName ? <h3 style={{ fontWeight: '600' }}>{pageName}</h3> : null}
                     <span className="fb-meta">
@@ -1268,15 +1298,19 @@ function App() {
             </div>
           </div>
 
-          <div className="placement-block">
-            <h2>Instagram Feed Placement</h2>
-            <div className="preview-layout">
+          <div className="placement-block placement-block--instagram">
+            <div className="placement-heading">
+              <span className="platform-pill platform-pill--instagram">Instagram</span>
+              <h3 className="placement-title">Feed placement</h3>
+            </div>
+            <p className="placement-spec">Meta mobile feed · 390px column width</p>
+            <div className="preview-layout preview-layout--stage preview-layout--instagram">
               <article className="ig-feed-preview">
                 <header className="ig-header">
                   <PageAvatar
                     pageName={pageName}
-                    brandLogos={IG_BRAND_LOGOS}
-                    defaultLogoUrl={TRINITY_BRAND_LOGO}
+                    brandLogos={client.igBrandLogos}
+                    defaultLogoUrl={client.brandLogo}
                   />
                   <div className="ig-header-meta">
                     {instagramHandle ? <strong className="ig-username">{instagramHandle}</strong> : null}
@@ -1304,6 +1338,51 @@ function App() {
         </div>
       </section>
     </main>
+  )
+}
+
+function App() {
+  const [session, setSession] = useState(() => readSession())
+
+  if (!session) {
+    return <ClientGate onAuthenticated={setSession} />
+  }
+
+  const handleLogout = () => {
+    clearClientSession()
+    setSession(null)
+  }
+
+  if (session.kind === 'admin' && !session.activeClient) {
+    return (
+      <AdminClientPicker
+        onSelectClient={(client) => {
+          writeAdminSession(client.id)
+          setSession({ kind: 'admin', activeClient: client })
+        }}
+        onLogout={handleLogout}
+      />
+    )
+  }
+
+  const activeClient = session.kind === 'client' ? session.client : session.activeClient
+  const isAdmin = session.kind === 'admin'
+
+  const handleSwitchClient = (client) => {
+    if (isAdmin) {
+      writeAdminSession(client.id)
+      setSession({ kind: 'admin', activeClient: client })
+    }
+  }
+
+  return (
+    <AdPreviewApp
+      key={activeClient.id}
+      client={activeClient}
+      isAdmin={isAdmin}
+      onSwitchClient={handleSwitchClient}
+      onLogout={handleLogout}
+    />
   )
 }
 
