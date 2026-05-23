@@ -5,7 +5,7 @@ const TRINITY_BRAND_LOGO = '/trinity-fb-brand-logo.png'
 export const CLIENTS = {
   trinity: {
     id: 'trinity',
-    label: 'Trinity Medical',
+    label: 'Trinity Medical Centre',
     brandLogo: TRINITY_BRAND_LOGO,
     pageNames: [TRINITY_PAGE_NAME, TRINITY_AESTHETICS_PAGE_NAME],
     displayUrls: ['trinitymedical.com.hk'],
@@ -160,6 +160,26 @@ export function clearClientSession() {
 
 export function getDraftStorageKey(clientId) {
   return `adpreview-draft-${clientId}-v1`
+}
+
+export function clearStoredDraft(clientId) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  window.localStorage.removeItem(getDraftStorageKey(clientId))
+}
+
+export function clearAllStoredDrafts() {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  for (const client of listClients()) {
+    clearStoredDraft(client.id)
+  }
+
+  window.localStorage.removeItem('adpreview-draft-v1')
 }
 
 export function getInstagramHandle(pageName, client) {

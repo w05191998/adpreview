@@ -5,6 +5,7 @@ import ClientGate from './ClientGate'
 import {
   CLIENTS,
   buildDefaultForm,
+  clearAllStoredDrafts,
   clearClientSession,
   getDraftStorageKey,
   getInstagramHandle,
@@ -77,7 +78,60 @@ const INITIAL_FORM = {
 
 const SHOW_SUBMIT_SECTION = false
 
-const MAX_STORED_MEDIA_BYTES = 3 * 1024 * 1024
+const MAX_STORED_MEDIA_BYTES = 4 * 1024 * 1024 * 1024
+
+/** Broad list for carousel; video-only upload uses no accept filter so Downloads files without .mp4 still appear. */
+const VIDEO_FILE_ACCEPT =
+  'video/*,.mp4,.mov,.m4v,.webm,.mkv,.avi,.mpeg,.mpg,.wmv,.3gp,.MP4,.MOV,.M4V,.WEBM,.MKV'
+
+function isVideoFile(file) {
+  if (file.type.startsWith('video/')) {
+    return true
+  }
+
+  if (file.type === 'application/mp4' || file.type === 'application/x-mpegURL') {
+    return true
+  }
+
+  return /\.(mp4|mov|m4v|webm|mkv|avi|mpeg|mpg|mpe|wmv|3gp)$/i.test(file.name)
+}
+
+async function looksLikeVideoFile(file) {
+  if (isVideoFile(file)) {
+    return true
+  }
+
+  try {
+    const header = new Uint8Array(await file.slice(0, 12).arrayBuffer())
+    if (header.length < 8) {
+      return false
+    }
+    const boxType = String.fromCharCode(header[4], header[5], header[6], header[7])
+    return boxType === 'ftyp' || boxType === 'moov' || boxType === 'mdat' || boxType === 'wide'
+  } catch {
+    return false
+  }
+}
+
+function getMediaFileAccept(creativeType) {
+  if (creativeType === 'carousel') {
+    return `image/*,${VIDEO_FILE_ACCEPT}`
+  }
+  if (creativeType === 'video') {
+    return undefined
+  }
+  return 'image/*'
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024 * 1024) {
+    return `${Math.round(bytes / 1024)} KB`
+  }
+  if (bytes < 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
+}
 
 function readStoredDraft(storageKey) {
   if (typeof window === 'undefined') {
@@ -486,20 +540,75 @@ function getIgCaptionLineClass(line) {
   return 'ig-caption-line'
 }
 
-function IgCaptionPreview({ username, text, clampLength = IG_CAPTION_CLAMP }) {
+function getIgCaptionDisplayLines({ text, headline, expanded, clampLength }) {
+  const normalizedText = normalizeIgCaptionText(text)
+  const normalizedHeadline = headline.trim()
+
+  if (expanded) {
+    const lines = []
+    if (normalizedHeadline) {
+      lines.push(normalizedHeadline)
+    }
+    if (normalizedText) {
+      lines.push(...splitIgCaptionLines(text))
+    }
+
+    return {
+      lines,
+      hasMore: false,
+      shouldClamp:
+        normalizedText.length > clampLength ||
+        normalizedText.includes('\n') ||
+        normalizedHeadline.length > IG_COLLAPSED_LINE_CHARS[0],
+    }
+  }
+
+  if (normalizedHeadline && !normalizedText) {
+    const line = truncatePrimaryText(normalizedHeadline, IG_COLLAPSED_LINE_CHARS[0])
+    return {
+      lines: [line],
+      hasMore: normalizedHeadline.length > line.length,
+      shouldClamp: normalizedHeadline.length > clampLength,
+    }
+  }
+
+  if (normalizedHeadline && normalizedText) {
+    const headlineLine = truncatePrimaryText(normalizedHeadline, IG_COLLAPSED_LINE_CHARS[0])
+    const collapsedPrimary = getIgCollapsedCaptionLines(normalizedText, clampLength)
+    return {
+      lines: [headlineLine, ...collapsedPrimary.lines].filter((line) => line.length > 0),
+      hasMore:
+        normalizedHeadline.length > headlineLine.length || collapsedPrimary.hasMore,
+      shouldClamp:
+        normalizedText.length > clampLength ||
+        normalizedText.includes('\n') ||
+        normalizedHeadline.length > headlineLine.length,
+    }
+  }
+
+  const collapsedCaption = getIgCollapsedCaptionLines(normalizedText, clampLength)
+  return {
+    lines: collapsedCaption.lines,
+    hasMore: collapsedCaption.hasMore,
+    shouldClamp: normalizedText.length > clampLength || normalizedText.includes('\n'),
+  }
+}
+
+function IgCaptionPreview({ username, text, headline = '', clampLength = IG_CAPTION_CLAMP }) {
   const [expanded, setExpanded] = useState(false)
   const normalizedText = normalizeIgCaptionText(text)
+  const normalizedHeadline = headline.trim()
   const normalizedUsername = username.trim()
 
   useEffect(() => {
     setExpanded(false)
-  }, [normalizedText])
+  }, [normalizedText, normalizedHeadline])
 
-  if (!normalizedText && !normalizedUsername) {
+  if (!normalizedText && !normalizedHeadline && !normalizedUsername) {
     return null
   }
 
-  if (!normalizedText) {
+  if (!normalizedText && !normalizedHeadline) {
     return (
       <div className="ig-caption-body ig-caption-body--collapsed">
         <p className="ig-caption-line">
@@ -509,9 +618,12 @@ function IgCaptionPreview({ username, text, clampLength = IG_CAPTION_CLAMP }) {
     )
   }
 
-  const shouldClamp = normalizedText.length > clampLength || normalizedText.includes('\n')
-  const collapsedCaption = getIgCollapsedCaptionLines(normalizedText, clampLength)
-  const lines = expanded ? splitIgCaptionLines(text) : collapsedCaption.lines
+  const { lines, hasMore, shouldClamp } = getIgCaptionDisplayLines({
+    text,
+    headline,
+    expanded,
+    clampLength,
+  })
 
   return (
     <div
@@ -528,7 +640,7 @@ function IgCaptionPreview({ username, text, clampLength = IG_CAPTION_CLAMP }) {
             </>
           ) : null}
           {line.length > 0 ? renderTextLineContent(line, lineIndex) : null}
-          {!expanded && collapsedCaption.hasMore && lineIndex === lines.length - 1 ? (
+          {!expanded && hasMore && lineIndex === lines.length - 1 ? (
             <>
               {'... '}
               <button type="button" className="ig-see-more" onClick={() => setExpanded(true)}>
@@ -605,11 +717,11 @@ const PLACEMENT_NOTES = {
   carousel:
     'Carousel supports 2-10 cards. Mixed image/video is allowed; keep a consistent ratio across cards.',
   reels:
-    'Reels recommends 9:16 (vertical). Keep top 14% and bottom 35% clear for UI overlays.',
+    'Video upload shows all files in the picker (including Downloads). MPEG-4 files without a .mp4 extension are supported. Files up to 4 GB can be previewed; very large files may not persist in the browser after sign-out due to storage limits.',
 }
 
 const getFileKind = (file) => {
-  if (file.type.startsWith('video/')) {
+  if (isVideoFile(file)) {
     return 'video'
   }
   return 'image'
@@ -661,6 +773,18 @@ async function fileToStoredAsset(file) {
   }
 }
 
+function createCarouselItemFromFile(file, index, copy = {}) {
+  return {
+    id: `${file.name}-${index}-${Date.now()}`,
+    kind: getFileKind(file),
+    name: file.name,
+    file,
+    url: URL.createObjectURL(file),
+    headline: copy.headline || '',
+    description: copy.description || '',
+  }
+}
+
 function createCarouselItemsFromAssets(assets) {
   if (!Array.isArray(assets)) {
     return []
@@ -673,13 +797,10 @@ function createCarouselItemsFromAssets(assets) {
         return null
       }
 
-      return {
-        id: `${asset.fileName}-${index}`,
-        kind: asset.kind || getFileKind(file),
-        name: asset.fileName,
-        file,
-        url: URL.createObjectURL(file),
-      }
+      return createCarouselItemFromFile(file, index, {
+        headline: asset.headline,
+        description: asset.description,
+      })
     })
     .filter(Boolean)
 }
@@ -696,8 +817,156 @@ function createSingleMediaStateFromDraft(draft) {
   }
 }
 
+function CarouselCardList({ items, activeIndex, onSelect, onReorder, onRemove, onUpdateField }) {
+  const [draggedIndex, setDraggedIndex] = useState(null)
+  const [dragOverIndex, setDragOverIndex] = useState(null)
+
+  const handleDragStart = (index) => (event) => {
+    if (event.target.closest('[data-carousel-no-drag]')) {
+      event.preventDefault()
+      return
+    }
+
+    setDraggedIndex(index)
+    setDragOverIndex(index)
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', String(index))
+  }
+
+  const handleDragOver = (index) => (event) => {
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index)
+    }
+  }
+
+  const handleDrop = (index) => (event) => {
+    event.preventDefault()
+    if (draggedIndex === null || draggedIndex === index) {
+      return
+    }
+    onReorder(draggedIndex, index)
+    setDraggedIndex(null)
+    setDragOverIndex(null)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null)
+    setDragOverIndex(null)
+  }
+
+  return (
+    <div className="full-width carousel-card-list">
+      <div className="carousel-card-list-header">
+        <div className="carousel-card-list-title">
+          <h4>Carousel cards</h4>
+          <span className="carousel-card-list-format-note">
+            (Support 2-10 cards with image/video creative format)
+          </span>
+        </div>
+        <span className="carousel-card-list-count">
+          {items.length} card{items.length === 1 ? '' : 's'}
+        </span>
+      </div>
+      <p className="carousel-card-list-lead">
+        Please drag a card to change its position. <strong>Card 1</strong> is shown first in the ad.
+      </p>
+      <ol className="carousel-card-list-items">
+        {items.map((item, index) => (
+          <li
+            key={item.id}
+            className={[
+              'carousel-card-list-item',
+              index === activeIndex ? 'is-active' : '',
+              draggedIndex === index ? 'is-dragging' : '',
+              dragOverIndex === index && draggedIndex !== index ? 'is-drag-over' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            draggable
+            onDragStart={handleDragStart(index)}
+            onDragOver={handleDragOver(index)}
+            onDrop={handleDrop(index)}
+            onDragEnd={handleDragEnd}
+            title="Drag anywhere on this card to reorder"
+          >
+            <div className="carousel-card-list-main">
+              <div className="carousel-card-list-body">
+                <div
+                  className="carousel-card-list-select"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onSelect(index)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      onSelect(index)
+                    }
+                  }}
+                  title={item.name}
+                >
+                  <span className="carousel-card-list-drag-grip" aria-hidden="true">
+                    ⋮⋮
+                  </span>
+                  <span className="carousel-card-list-rank">{index + 1}</span>
+                  <span className="carousel-card-list-thumb" data-carousel-no-drag aria-hidden="true">
+                    {item.kind === 'video' ? (
+                      <video src={item.url} muted playsInline preload="metadata" draggable={false} />
+                    ) : (
+                      <img src={item.url} alt="" draggable={false} />
+                    )}
+                  </span>
+                </div>
+                <label className="carousel-card-list-headline" data-carousel-no-drag>
+                  <span className="carousel-card-list-field-label">Card {index + 1}</span>
+                  <input
+                    type="text"
+                    value={item.headline}
+                    onChange={(event) => onUpdateField(index, 'headline', event.target.value)}
+                    onClick={(event) => event.stopPropagation()}
+                    maxLength={META_AD_HARD_LIMITS.headline.max}
+                    placeholder="Headline"
+                  />
+                </label>
+              </div>
+              <label
+                className="carousel-card-list-field carousel-card-list-field--description"
+                data-carousel-no-drag
+              >
+                <span className="carousel-card-list-field-label">Description (optional)</span>
+                <input
+                  type="text"
+                  value={item.description}
+                  onChange={(event) => onUpdateField(index, 'description', event.target.value)}
+                  onClick={(event) => event.stopPropagation()}
+                  maxLength={META_AD_HARD_LIMITS.description.max}
+                  placeholder="Description"
+                />
+              </label>
+            </div>
+            <button
+              type="button"
+              className="carousel-card-list-action carousel-card-list-action--remove"
+              data-carousel-no-drag
+              draggable={false}
+              onClick={() => onRemove(index)}
+              disabled={items.length <= 2}
+              aria-label={`Remove card ${index + 1}`}
+              title={items.length <= 2 ? 'Carousel needs at least 2 cards' : 'Remove card'}
+            >
+              Remove
+            </button>
+          </li>
+        ))}
+      </ol>
+    </div>
+  )
+}
+
 function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
   const storageKey = getDraftStorageKey(client.id)
+  const shouldPersistDraftRef = useRef(true)
   const isDesktopLayout = useDesktopLayout()
   const [initialDraft] = useState(() => readStoredDraft(storageKey))
   const [initialSingleMedia] = useState(() => createSingleMediaStateFromDraft(initialDraft))
@@ -723,22 +992,59 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
   })
   const [submitMessage, setSubmitMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [mediaUploadNotice, setMediaUploadNotice] = useState('')
 
   singlePreviewUrlRef.current = singlePreviewUrl
   carouselItemsRef.current = carouselItems
+
+  const handleSignOut = () => {
+    shouldPersistDraftRef.current = false
+    clearAllStoredDrafts()
+    onLogout()
+  }
+
+  useEffect(() => {
+    const handlePageHide = () => {
+      shouldPersistDraftRef.current = false
+      clearAllStoredDrafts()
+    }
+
+    window.addEventListener('pagehide', handlePageHide)
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide)
+      shouldPersistDraftRef.current = false
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
 
     async function persistDraft() {
+      if (!shouldPersistDraftRef.current) {
+        return
+      }
+
       const singleAsset = singleMediaFile ? await fileToStoredAsset(singleMediaFile) : null
       const carouselAssets = (
         await Promise.all(
-          carouselItems.filter((item) => item.file).map((item) => fileToStoredAsset(item.file)),
+          carouselItems
+            .filter((item) => item.file)
+            .map(async (item) => {
+              const asset = await fileToStoredAsset(item.file)
+              if (!asset) {
+                return null
+              }
+
+              return {
+                ...asset,
+                headline: item.headline || '',
+                description: item.description || '',
+              }
+            }),
         )
       ).filter(Boolean)
 
-      if (cancelled) {
+      if (cancelled || !shouldPersistDraftRef.current) {
         return
       }
 
@@ -802,13 +1108,7 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
 
   const replaceCarouselMedia = (files) => {
     const normalizedFiles = Array.isArray(files) ? files.slice(0, 10) : []
-    const nextItems = normalizedFiles.map((file, index) => ({
-      id: `${file.name}-${index}-${Date.now()}`,
-      kind: getFileKind(file),
-      name: file.name,
-      file,
-      url: URL.createObjectURL(file),
-    }))
+    const nextItems = normalizedFiles.map((file, index) => createCarouselItemFromFile(file, index))
 
     setCarouselItems((previousItems) => {
       previousItems.forEach((item) => URL.revokeObjectURL(item.url))
@@ -817,17 +1117,101 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
     setActiveCarouselIndex(0)
   }
 
-  const handleSingleFileChange = (event) => {
+  const reorderCarouselItems = (fromIndex, toIndex) => {
+    if (fromIndex === toIndex) {
+      return
+    }
+
+    setCarouselItems((previousItems) => {
+      const nextItems = [...previousItems]
+      const [movedItem] = nextItems.splice(fromIndex, 1)
+      nextItems.splice(toIndex, 0, movedItem)
+      return nextItems
+    })
+    setActiveCarouselIndex(toIndex)
+  }
+
+  const updateCarouselCardField = (index, field, value) => {
+    setCarouselItems((previousItems) =>
+      previousItems.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item,
+      ),
+    )
+  }
+
+  const removeCarouselItem = (index) => {
+    setCarouselItems((previousItems) => {
+      const removed = previousItems[index]
+      if (removed?.url) {
+        URL.revokeObjectURL(removed.url)
+      }
+      return previousItems.filter((_, itemIndex) => itemIndex !== index)
+    })
+    setActiveCarouselIndex((previousIndex) => {
+      if (previousIndex > index) {
+        return previousIndex - 1
+      }
+      if (previousIndex >= index && index > 0) {
+        return index - 1
+      }
+      return 0
+    })
+  }
+
+  const handleSingleFileChange = async (event) => {
     const selected = event.target.files?.[0]
     if (!selected) {
       replaceSingleMedia(null)
+      setMediaUploadNotice('')
       return
     }
+
+    if (creativeType === 'image' && (await looksLikeVideoFile(selected))) {
+      setMediaUploadNotice(
+        'That file is a video (MPEG-4). Set Creative Type to "Single Video" above, then choose the file again.',
+      )
+      event.target.value = ''
+      return
+    }
+
+    if (creativeType === 'video' && !(await looksLikeVideoFile(selected))) {
+      setMediaUploadNotice(
+        'That file does not look like a video. Try your MP4 from Downloads, or rename it to end with .mp4.',
+      )
+      event.target.value = ''
+      return
+    }
+
+    if (selected.size > MAX_STORED_MEDIA_BYTES) {
+      setMediaUploadNotice(
+        `File is ${formatFileSize(selected.size)}. Preview works now, but only files up to ${formatFileSize(MAX_STORED_MEDIA_BYTES)} are kept after you sign out or close the tab.`,
+      )
+    } else {
+      setMediaUploadNotice('')
+    }
+
     replaceSingleMedia(selected)
   }
 
   const handleCarouselChange = (event) => {
-    replaceCarouselMedia(Array.from(event.target.files || []))
+    const files = Array.from(event.target.files || [])
+    if (files.length === 0) {
+      return
+    }
+
+    if (files.length < 2) {
+      setMediaUploadNotice('Carousel ads need at least 2 cards. Select 2–10 image or video files.')
+      event.target.value = ''
+      return
+    }
+
+    if (files.length > 10) {
+      setMediaUploadNotice('Carousel supports up to 10 cards. Only the first 10 files were added.')
+    } else {
+      setMediaUploadNotice('')
+    }
+
+    replaceCarouselMedia(files)
   }
 
   const submitPayloadByForm = (endpointUrl, payloadValue) => {
@@ -879,6 +1263,8 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
             fileName: item.file.name,
             mimeType: item.file.type,
             kind: item.kind,
+            headline: item.headline || '',
+            description: item.description || '',
             base64Data: await fileToBase64(item.file),
           })),
       )
@@ -902,6 +1288,8 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
           fileName: item.fileName,
           mimeType: item.mimeType,
           kind: item.kind,
+          headline: item.headline,
+          description: item.description,
         })),
       }
 
@@ -925,6 +1313,13 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
   const pageName = form.pageName.trim()
   const instagramHandle = getInstagramHandle(pageName, client)
   const footerLinkLabel = ctaLabel === WHATSAPP_CTA_LABEL ? 'WHATSAPP' : displayUrl
+  const activeCarouselItem = carouselItems[activeCarouselIndex]
+  const previewHeadline =
+    creativeType === 'carousel' ? activeCarouselItem?.headline?.trim() || '' : form.headline.trim()
+  const previewDescription =
+    creativeType === 'carousel'
+      ? activeCarouselItem?.description?.trim() || ''
+      : form.description.trim()
   const renderMedia = (ratioCssValue) => {
     const mediaStyle = { '--media-ratio': ratioCssValue }
 
@@ -1030,14 +1425,14 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
                   </select>
                   <span className="panel-admin-badge">Admin</span>
                 </label>
-                <button type="button" className="panel-logout" onClick={onLogout}>
+                <button type="button" className="panel-logout" onClick={handleSignOut}>
                   Sign out
                 </button>
               </>
             ) : (
               <>
                 <span className="panel-client-badge">{client.label}</span>
-                <button type="button" className="panel-logout" onClick={onLogout}>
+                <button type="button" className="panel-logout" onClick={handleSignOut}>
                   Sign out
                 </button>
               </>
@@ -1120,31 +1515,35 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
                 />
               </label>
 
-              <label>
-                <span className="field-label-row">
-                  <span>Headline</span>
-                  <FieldCharCounter fieldKey="headline" value={form.headline} />
-                </span>
-                <input
-                  name="headline"
-                  value={form.headline}
-                  onChange={handleInputChange}
-                  maxLength={META_AD_HARD_LIMITS.headline.max}
-                />
-              </label>
+              {creativeType !== 'carousel' ? (
+                <>
+                  <label>
+                    <span className="field-label-row">
+                      <span>Headline</span>
+                      <FieldCharCounter fieldKey="headline" value={form.headline} />
+                    </span>
+                    <input
+                      name="headline"
+                      value={form.headline}
+                      onChange={handleInputChange}
+                      maxLength={META_AD_HARD_LIMITS.headline.max}
+                    />
+                  </label>
 
-              <label>
-                <span className="field-label-row">
-                  <span>Description (optional)</span>
-                  <FieldCharCounter fieldKey="description" value={form.description} />
-                </span>
-                <input
-                  name="description"
-                  value={form.description}
-                  onChange={handleInputChange}
-                  maxLength={META_AD_HARD_LIMITS.description.max}
-                />
-              </label>
+                  <label>
+                    <span className="field-label-row">
+                      <span>Description (optional)</span>
+                      <FieldCharCounter fieldKey="description" value={form.description} />
+                    </span>
+                    <input
+                      name="description"
+                      value={form.description}
+                      onChange={handleInputChange}
+                      maxLength={META_AD_HARD_LIMITS.description.max}
+                    />
+                  </label>
+                </>
+              ) : null}
 
               <label className="full-width">
                 CTA Button
@@ -1201,15 +1600,12 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
                     ? 'Upload Video'
                     : 'Upload Image'}
                 <input
+                  key={creativeType}
                   type="file"
                   multiple={creativeType === 'carousel'}
-                  accept={
-                    creativeType === 'carousel'
-                      ? 'image/*,video/*'
-                      : creativeType === 'video'
-                        ? 'video/*'
-                        : 'image/*'
-                  }
+                  {...(getMediaFileAccept(creativeType)
+                    ? { accept: getMediaFileAccept(creativeType) }
+                    : {})}
                   onChange={
                     creativeType === 'carousel'
                       ? handleCarouselChange
@@ -1218,13 +1614,50 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
                 />
               </label>
 
-              <div className="full-width spec-note">
-                {creativeType === 'carousel'
-                  ? PLACEMENT_NOTES.carousel
-                  : creativeType === 'video'
-                    ? PLACEMENT_NOTES.reels
-                    : PLACEMENT_NOTES.feed}
-              </div>
+              {creativeType === 'carousel' ? (
+                <p className="full-width media-upload-hint">
+                  Select 2–10 files at once, then drag cards in the list below to set priority —{' '}
+                  <strong>Card 1</strong> is shown first.
+                </p>
+              ) : creativeType === 'video' ? (
+                <p className="full-width media-upload-hint">
+                  The file picker shows all files. Open <strong>Downloads</strong>, select your
+                  video (e.g. Mday Video), or choose <strong>All Files</strong> if it is hidden.
+                </p>
+              ) : (
+                <p className="full-width media-upload-hint">
+                  To upload your Downloads MPEG-4 video, set <strong>Creative Type</strong> to{' '}
+                  <strong>Single Video</strong> first. Image mode only shows pictures in the file
+                  picker.
+                </p>
+              )}
+
+              {creativeType === 'carousel' && carouselItems.length > 0 ? (
+                <CarouselCardList
+                  items={carouselItems}
+                  activeIndex={activeCarouselIndex}
+                  onSelect={setActiveCarouselIndex}
+                  onReorder={reorderCarouselItems}
+                  onRemove={removeCarouselItem}
+                  onUpdateField={updateCarouselCardField}
+                />
+              ) : null}
+
+              {mediaUploadNotice ? (
+                <p className="full-width media-upload-notice" role="status">
+                  {mediaUploadNotice}
+                </p>
+              ) : null}
+
+              {creativeType === 'carousel' && carouselItems.length > 0 ? null : (
+                <div className="full-width spec-note">
+                  {creativeType === 'carousel'
+                    ? PLACEMENT_NOTES.carousel
+                    : creativeType === 'video'
+                      ? PLACEMENT_NOTES.reels
+                      : PLACEMENT_NOTES.feed}
+                </div>
+              )}
             </div>
           </section>
 
@@ -1257,7 +1690,7 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
 
       <section className="preview-panel">
         <header className="preview-panel-header">
-          <h2 className="preview-panel-title">Live placements</h2>
+          <h2 className="preview-panel-title">Ad Preview</h2>
           <p className="preview-panel-desc">
             Feed mocks update live as you edit copy and creative.
           </p>
@@ -1304,8 +1737,8 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
                         {footerLinkLabel}
                       </small>
                     ) : null}
-                    {form.headline.trim() ? <h4>{form.headline}</h4> : null}
-                    {form.description.trim() ? <p>{form.description}</p> : null}
+                    {previewHeadline ? <h4>{previewHeadline}</h4> : null}
+                    {previewDescription ? <p>{previewDescription}</p> : null}
                   </div>
                   <CtaButton label={form.ctaLabel} />
                 </footer>
@@ -1347,7 +1780,11 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
                 <IgEngagementBar />
 
                 <div className="ig-caption">
-                  <IgCaptionPreview username={instagramHandle} text={form.primaryText} />
+                  <IgCaptionPreview
+                    username={instagramHandle}
+                    text={form.primaryText}
+                    headline={creativeType === 'carousel' ? previewHeadline : ''}
+                  />
                 </div>
               </article>
             </div>
@@ -1366,6 +1803,7 @@ function App() {
   }
 
   const handleLogout = () => {
+    clearAllStoredDrafts()
     clearClientSession()
     setSession(null)
   }
