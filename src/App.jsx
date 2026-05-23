@@ -919,7 +919,7 @@ function CarouselCardList({ items, activeIndex, onSelect, onReorder, onRemove, o
                   </span>
                 </div>
                 <label className="carousel-card-list-headline" data-carousel-no-drag>
-                  <span className="carousel-card-list-field-label">Card {index + 1}</span>
+                  <span className="carousel-card-list-field-label">Headline</span>
                   <input
                     type="text"
                     value={item.headline}

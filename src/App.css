@@ -1,7 +1,7 @@
 /* —— App shell & builder (FB/IG feed cards below are unchanged) —— */
 
 .app-shell {
-  --builder-column-width: min(100%, 580px);
+  --builder-column-width: min(100%, 640px);
   display: grid;
   grid-template-columns: minmax(0, var(--builder-column-width)) minmax(0, 1fr);
   min-height: 100vh;
@@ -919,7 +919,7 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(13rem, 1fr) auto;
+  grid-template-columns: minmax(0, 1.65fr) minmax(7.5rem, 9.25rem) auto;
   align-items: stretch;
   gap: 0;
   border: 1px solid #dbe1ea;
@@ -1546,8 +1546,8 @@
 
 @media (min-width: 1025px) {
   .app-shell {
-    --builder-column-width: min(720px, 46vw);
-    grid-template-columns: minmax(520px, var(--builder-column-width)) minmax(0, 1fr);
+    --builder-column-width: min(820px, 52vw);
+    grid-template-columns: minmax(560px, var(--builder-column-width)) minmax(0, 1fr);
   }
 }
 
