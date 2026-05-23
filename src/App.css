@@ -1,8 +1,9 @@
 /* —— App shell & builder (FB/IG feed cards below are unchanged) —— */
 
 .app-shell {
+  --builder-column-width: min(100%, 580px);
   display: grid;
-  grid-template-columns: minmax(0, 480px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, var(--builder-column-width)) minmax(0, 1fr);
   min-height: 100vh;
   width: 100%;
   max-width: 100%;
@@ -381,6 +382,69 @@
   color: #4b5563;
   font-size: 0.82rem;
   line-height: 1.45;
+}
+
+.media-upload-label-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+}
+
+.media-upload-label {
+  flex-shrink: 0;
+}
+
+.media-upload-hint--inline {
+  font-weight: 400;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.media-upload-field {
+  gap: 0.42rem;
+}
+
+.media-upload-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.media-upload-field:focus-within .media-upload-bar {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 18%);
+}
+
+.media-upload-input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.85rem;
+}
+
+.media-upload-input:hover,
+.media-upload-input:focus {
+  border: none;
+  box-shadow: none;
+}
+
+.media-upload-hint--in-bar {
+  margin: 0;
+  font-weight: 400;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #4b5563;
 }
 
 .media-upload-notice {
@@ -855,7 +919,7 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(11rem, 0.85fr) auto;
+  grid-template-columns: minmax(0, 1.2fr) minmax(13rem, 1fr) auto;
   align-items: stretch;
   gap: 0;
   border: 1px solid #dbe1ea;
@@ -1482,7 +1546,8 @@
 
 @media (min-width: 1025px) {
   .app-shell {
-    grid-template-columns: minmax(400px, 560px) minmax(0, 1fr);
+    --builder-column-width: min(720px, 46vw);
+    grid-template-columns: minmax(520px, var(--builder-column-width)) minmax(0, 1fr);
   }
 }
 

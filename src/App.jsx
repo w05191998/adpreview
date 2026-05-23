@@ -1593,44 +1593,49 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
                 </select>
               </label>
 
-              <label className="full-width">
-                {creativeType === 'carousel'
-                  ? 'Upload Carousel Cards'
-                  : creativeType === 'video'
-                    ? 'Upload Video'
-                    : 'Upload Image'}
-                <input
-                  key={creativeType}
-                  type="file"
-                  multiple={creativeType === 'carousel'}
-                  {...(getMediaFileAccept(creativeType)
-                    ? { accept: getMediaFileAccept(creativeType) }
-                    : {})}
-                  onChange={
-                    creativeType === 'carousel'
-                      ? handleCarouselChange
-                      : handleSingleFileChange
-                  }
-                />
+              <label className="full-width media-upload-field">
+                {creativeType === 'carousel' ? (
+                  <span className="media-upload-label-row">
+                    <span className="media-upload-label">Upload Carousel Cards</span>
+                    <span className="media-upload-hint media-upload-hint--inline">
+                      Select 2–10 files at once, then drag cards in the list below to set priority —{' '}
+                      <strong>Card 1</strong> is shown first.
+                    </span>
+                  </span>
+                ) : creativeType === 'video' ? (
+                  'Upload Video'
+                ) : (
+                  'Upload Image'
+                )}
+                <div className="media-upload-bar">
+                  <input
+                    key={creativeType}
+                    className="media-upload-input"
+                    type="file"
+                    multiple={creativeType === 'carousel'}
+                    {...(getMediaFileAccept(creativeType)
+                      ? { accept: getMediaFileAccept(creativeType) }
+                      : {})}
+                    onChange={
+                      creativeType === 'carousel'
+                        ? handleCarouselChange
+                        : handleSingleFileChange
+                    }
+                  />
+                  {creativeType === 'video' ? (
+                    <p className="media-upload-hint media-upload-hint--in-bar">
+                      The file picker shows all files. Open <strong>Downloads</strong>, select your
+                      video (e.g. Mday Video), or choose <strong>All Files</strong> if it is hidden.
+                    </p>
+                  ) : creativeType === 'image' ? (
+                    <p className="media-upload-hint media-upload-hint--in-bar">
+                      To upload your Downloads MPEG-4 video, set <strong>Creative Type</strong> to{' '}
+                      <strong>Single Video</strong> first. Image mode only shows pictures in the file
+                      picker.
+                    </p>
+                  ) : null}
+                </div>
               </label>
-
-              {creativeType === 'carousel' ? (
-                <p className="full-width media-upload-hint">
-                  Select 2–10 files at once, then drag cards in the list below to set priority —{' '}
-                  <strong>Card 1</strong> is shown first.
-                </p>
-              ) : creativeType === 'video' ? (
-                <p className="full-width media-upload-hint">
-                  The file picker shows all files. Open <strong>Downloads</strong>, select your
-                  video (e.g. Mday Video), or choose <strong>All Files</strong> if it is hidden.
-                </p>
-              ) : (
-                <p className="full-width media-upload-hint">
-                  To upload your Downloads MPEG-4 video, set <strong>Creative Type</strong> to{' '}
-                  <strong>Single Video</strong> first. Image mode only shows pictures in the file
-                  picker.
-                </p>
-              )}
 
               {creativeType === 'carousel' && carouselItems.length > 0 ? (
                 <CarouselCardList
