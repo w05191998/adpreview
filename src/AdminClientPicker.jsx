@@ -1,10 +1,8 @@
 import { CLIENTS, listClients, writeAdminSession } from './clientConfig'
-import HollyAdminTicker from './HollyAdminTicker'
 import './ClientGate.css'
 
 export default function AdminClientPicker({ adminProfile = 'standard', onSelectClient, onLogout }) {
   const clients = listClients()
-  const showHollySurprise = adminProfile === 'holly'
 
   const handleSelect = (clientId) => {
     writeAdminSession(clientId, adminProfile)
@@ -51,8 +49,6 @@ export default function AdminClientPicker({ adminProfile = 'standard', onSelectC
             Sign out
           </button>
         </div>
-
-        {showHollySurprise ? <HollyAdminTicker /> : null}
       </div>
     </div>
   )

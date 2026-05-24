@@ -2,6 +2,9 @@ const TRINITY_PAGE_NAME = 'Trinity Medical Centre 全仁醫務中心'
 const TRINITY_AESTHETICS_PAGE_NAME = 'Trinity Medical Aesthetics 全仁醫學美容'
 const TRINITY_BRAND_LOGO = '/trinity-fb-brand-logo.png'
 
+const LANE_CRAWFORD_PAGE_NAME = 'Lane Crawford'
+const LANE_CRAWFORD_BRAND_LOGO = '/lane-crawford-brand-logo.png'
+
 export const CLIENTS = {
   trinity: {
     id: 'trinity',
@@ -26,6 +29,28 @@ export const CLIENTS = {
     },
     defaultIgHandle: 'trinitymedicalhongkong',
   },
+  laneCrawford: {
+    id: 'laneCrawford',
+    label: 'Lane Crawford',
+    fbBrandName: 'Lane Crawford',
+    igBrandHandle: 'lanecrawford',
+    brandLogo: LANE_CRAWFORD_BRAND_LOGO,
+    pageNames: [LANE_CRAWFORD_PAGE_NAME],
+    displayUrls: ['lanecrawford.com'],
+    defaultPageName: LANE_CRAWFORD_PAGE_NAME,
+    defaultDisplayUrl: 'lanecrawford.com',
+    defaultDestinationUrl: 'https://www.lanecrawford.com/',
+    fbBrandLogos: {
+      [LANE_CRAWFORD_PAGE_NAME]: LANE_CRAWFORD_BRAND_LOGO,
+    },
+    igBrandLogos: {
+      [LANE_CRAWFORD_PAGE_NAME]: LANE_CRAWFORD_BRAND_LOGO,
+    },
+    igPageHandles: {
+      [LANE_CRAWFORD_PAGE_NAME]: 'lanecrawford',
+    },
+    defaultIgHandle: 'lanecrawford',
+  },
 }
 
 const SESSION_KEY = 'adpreview-client-session'
@@ -34,40 +59,55 @@ export function listClients() {
   return Object.values(CLIENTS)
 }
 
+export function clientUsesPlatformHub(client) {
+  return client?.id === 'laneCrawford'
+}
+
+const CLIENT_ACCESS_CODES = {
+  trinity: {
+    envKey: 'VITE_CLIENT_PASSWORD_TRINITY',
+    defaultPassword: 'trinity',
+  },
+  laneCrawford: {
+    envKey: 'VITE_CLIENT_PASSWORD_LANECRAWFORD',
+    defaultPassword: 'lanecrawford',
+  },
+}
+
 function getExpectedPassword(clientId) {
-  const envKey = `VITE_CLIENT_PASSWORD_${clientId.toUpperCase()}`
-  const fromEnv = import.meta.env[envKey]
+  const access = CLIENT_ACCESS_CODES[clientId]
+  if (!access) {
+    return ''
+  }
+
+  const fromEnv = import.meta.env[access.envKey]
   if (typeof fromEnv === 'string' && fromEnv.length > 0) {
     return fromEnv
   }
-  if (import.meta.env.DEV && clientId === 'trinity') {
-    return 'trinity'
-  }
-  return ''
+
+  return access.defaultPassword
 }
 
 const ADMIN_PROFILES = [
   {
     profile: 'holly',
     envKey: 'VITE_CLIENT_PASSWORD_ADMIN_HOLLY',
-    devPassword: 'adminholly',
+    defaultPassword: 'adminholly',
   },
   {
     profile: 'standard',
     envKey: 'VITE_CLIENT_PASSWORD_ADMIN',
-    devPassword: 'adminfabcom',
+    defaultPassword: 'adminfabcom',
   },
 ]
 
-function getAdminPasswordForProfile({ envKey, devPassword }) {
+function getAdminPasswordForProfile({ envKey, defaultPassword }) {
   const fromEnv = import.meta.env[envKey]
   if (typeof fromEnv === 'string' && fromEnv.length > 0) {
     return fromEnv
   }
-  if (import.meta.env.DEV) {
-    return devPassword
-  }
-  return ''
+
+  return defaultPassword
 }
 
 function resolveAdminProfile(password) {
@@ -182,6 +222,15 @@ export function clearAllStoredDrafts() {
   window.localStorage.removeItem('adpreview-draft-v1')
 }
 
+export function getFacebookBrandName(pageName, client) {
+  if (client.fbBrandName) {
+    return client.fbBrandName
+  }
+
+  const normalizedName = pageName.trim()
+  return normalizedName || client.defaultPageName
+}
+
 export function getInstagramHandle(pageName, client) {
   const normalizedName = pageName.trim()
   if (!normalizedName) {
@@ -193,6 +242,14 @@ export function getInstagramHandle(pageName, client) {
   }
 
   return client.defaultIgHandle
+}
+
+export function getInstagramBrandHandle(pageName, client) {
+  if (client.igBrandHandle) {
+    return client.igBrandHandle
+  }
+
+  return getInstagramHandle(pageName, client)
 }
 
 export function buildDefaultForm(client) {

@@ -1,14 +1,17 @@
-import { WhatsAppOutlined } from '@ant-design/icons'
+import { LinkOutlined, WhatsAppOutlined } from '@ant-design/icons'
 import { useEffect, useRef, useState } from 'react'
 import AdminClientPicker from './AdminClientPicker'
 import ClientGate from './ClientGate'
+import LaneCrawfordPlatformHub from './LaneCrawfordPlatformHub'
 import {
   CLIENTS,
   buildDefaultForm,
+  clientUsesPlatformHub,
+  getFacebookBrandName,
+  getInstagramBrandHandle,
   clearAllStoredDrafts,
   clearClientSession,
   getDraftStorageKey,
-  getInstagramHandle,
   listClients,
   readSession,
   writeAdminSession,
@@ -27,7 +30,6 @@ const MEDIA_RATIOS = [
   { key: '1:1', label: 'Square (1:1)', cssValue: '1 / 1' },
   { key: '4:5', label: 'Portrait (4:5)', cssValue: '4 / 5' },
   { key: '9:16', label: 'Story/Reel (9:16)', cssValue: '9 / 16' },
-  { key: '1.91:1', label: 'Landscape (1.91:1)', cssValue: '1.91 / 1' },
 ]
 
 function formatIgCtaLabel(label) {
@@ -44,25 +46,13 @@ function formatIgCtaLabel(label) {
 }
 
 const FACEBOOK_CTA_OPTIONS = [
-  'Apply Now',
-  'Book Now',
-  'Contact Us',
-  'Download',
-  'Get Offer',
-  'Get Quote',
-  'Learn More',
-  'Listen Now',
-  'Order Now',
-  'Play Game',
-  'Request Time',
-  'See Menu',
-  'Send Message',
+  'Book now',
+  'Contact us',
+  'Learn more',
+  'Order now',
+  'Shop now',
+  'Sign up',
   'Send WhatsApp Message',
-  'Shop Now',
-  'Sign Up',
-  'Subscribe',
-  'Watch More',
-  'Watch Video',
 ]
 
 const INITIAL_FORM = {
@@ -74,6 +64,19 @@ const INITIAL_FORM = {
   ctaLabel: '',
   destinationUrl: '',
   displayUrl: '',
+}
+
+function getOpenableUrl(url) {
+  const trimmed = (url || '').trim()
+  if (!trimmed) {
+    return ''
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed
+  }
+
+  return `https://${trimmed}`
 }
 
 const SHOW_SUBMIT_SECTION = false
@@ -494,21 +497,6 @@ function getIgCollapsedCaptionLines(text, clampLength) {
   }
 }
 
-function useDesktopLayout() {
-  const [isDesktop, setIsDesktop] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1025px)').matches,
-  )
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(min-width: 1025px)')
-    const onChange = (event) => setIsDesktop(event.matches)
-    mediaQuery.addEventListener('change', onChange)
-    return () => mediaQuery.removeEventListener('change', onChange)
-  }, [])
-
-  return isDesktop
-}
-
 function renderTextLineContent(line, lineIndex) {
   const segments = line.split(URL_SPLIT_PATTERN).filter(Boolean)
   return (
@@ -713,7 +701,6 @@ function PrimaryTextPreview({
 }
 
 const PLACEMENT_NOTES = {
-  feed: 'Feed supports 1:1 and 4:5. Meta recommends 4:5 for Facebook Feed single image.',
   carousel:
     'Carousel supports 2-10 cards. Mixed image/video is allowed; keep a consistent ratio across cards.',
   reels:
@@ -964,10 +951,9 @@ function CarouselCardList({ items, activeIndex, onSelect, onReorder, onRemove, o
   )
 }
 
-function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
+function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout, onBackToPlatformHub }) {
   const storageKey = getDraftStorageKey(client.id)
   const shouldPersistDraftRef = useRef(true)
-  const isDesktopLayout = useDesktopLayout()
   const [initialDraft] = useState(() => readStoredDraft(storageKey))
   const [initialSingleMedia] = useState(() => createSingleMediaStateFromDraft(initialDraft))
   const singlePreviewUrlRef = useRef('')
@@ -1168,7 +1154,7 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
 
     if (creativeType === 'image' && (await looksLikeVideoFile(selected))) {
       setMediaUploadNotice(
-        'That file is a video (MPEG-4). Set Creative Type to "Single Video" above, then choose the file again.',
+        'That file is a video (MPEG-4). Set Creative Format to "Single Video" above, then choose the file again.',
       )
       event.target.value = ''
       return
@@ -1311,7 +1297,9 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
   const displayUrl = form.displayUrl.trim()
   const ctaLabel = form.ctaLabel.trim()
   const pageName = form.pageName.trim()
-  const instagramHandle = getInstagramHandle(pageName, client)
+  const facebookBrandName = getFacebookBrandName(pageName, client)
+  const instagramBrandHandle = getInstagramBrandHandle(pageName, client)
+  const instagramPageName = pageName || client.defaultPageName
   const footerLinkLabel = ctaLabel === WHATSAPP_CTA_LABEL ? 'WHATSAPP' : displayUrl
   const activeCarouselItem = carouselItems[activeCarouselIndex]
   const previewHeadline =
@@ -1410,6 +1398,11 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
           <div className="panel-header-actions">
             {isAdmin ? (
               <>
+                {onBackToPlatformHub ? (
+                  <button type="button" className="panel-back" onClick={onBackToPlatformHub}>
+                    Platforms
+                  </button>
+                ) : null}
                 <label className="panel-admin-client">
                   <span className="panel-admin-client-label">Client</span>
                   <select
@@ -1431,6 +1424,11 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
               </>
             ) : (
               <>
+                {onBackToPlatformHub ? (
+                  <button type="button" className="panel-back" onClick={onBackToPlatformHub}>
+                    Platforms
+                  </button>
+                ) : null}
                 <span className="panel-client-badge">{client.label}</span>
                 <button type="button" className="panel-logout" onClick={handleSignOut}>
                   Sign out
@@ -1470,12 +1468,29 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
 
               <label className="full-width">
                 Destination URL
-                <input
-                  name="destinationUrl"
-                  value={form.destinationUrl}
-                  onChange={handleInputChange}
-                  placeholder={client.defaultDestinationUrl}
-                />
+                <div className="destination-url-row">
+                  <input
+                    name="destinationUrl"
+                    value={form.destinationUrl}
+                    onChange={handleInputChange}
+                    placeholder={client.defaultDestinationUrl}
+                  />
+                  <button
+                    type="button"
+                    className="destination-url-open"
+                    disabled={!getOpenableUrl(form.destinationUrl)}
+                    onClick={() => {
+                      const href = getOpenableUrl(form.destinationUrl)
+                      if (href) {
+                        window.open(href, '_blank', 'noopener,noreferrer')
+                      }
+                    }}
+                    aria-label="Open destination URL in a new tab"
+                    title="Open landing page in new tab"
+                  >
+                    <LinkOutlined aria-hidden="true" />
+                  </button>
+                </div>
               </label>
 
               <label className="full-width">
@@ -1566,7 +1581,7 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
             </div>
             <div className="form-grid">
               <label>
-                Creative Type
+                Creative Format
                 <select value={creativeType} onChange={(e) => setCreativeType(e.target.value)}>
                   {Object.entries(CREATIVE_TYPE).map(([key, label]) => (
                     <option key={key} value={key}>
@@ -1577,7 +1592,7 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
               </label>
 
               <label>
-                Primary Ratio
+                Creative Size
                 <select
                   value={mediaRatio.key}
                   onChange={(event) => {
@@ -1629,9 +1644,8 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
                     </p>
                   ) : creativeType === 'image' ? (
                     <p className="media-upload-hint media-upload-hint--in-bar">
-                      To upload your Downloads MPEG-4 video, set <strong>Creative Type</strong> to{' '}
-                      <strong>Single Video</strong> first. Image mode only shows pictures in the file
-                      picker.
+                      To upload video, set <strong>Creative Format</strong> to{' '}
+                      <strong>Single Video</strong> first.
                     </p>
                   ) : null}
                 </div>
@@ -1654,15 +1668,12 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
                 </p>
               ) : null}
 
-              {creativeType === 'carousel' && carouselItems.length > 0 ? null : (
+              {creativeType === 'video' ||
+              (creativeType === 'carousel' && carouselItems.length === 0) ? (
                 <div className="full-width spec-note">
-                  {creativeType === 'carousel'
-                    ? PLACEMENT_NOTES.carousel
-                    : creativeType === 'video'
-                      ? PLACEMENT_NOTES.reels
-                      : PLACEMENT_NOTES.feed}
+                  {creativeType === 'carousel' ? PLACEMENT_NOTES.carousel : PLACEMENT_NOTES.reels}
                 </div>
-              )}
+              ) : null}
             </div>
           </section>
 
@@ -1712,12 +1723,14 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
               <article className="feed-preview fb-card">
                 <header className="fb-header">
                   <PageAvatar
-                    pageName={pageName}
+                    pageName={facebookBrandName}
                     brandLogos={client.fbBrandLogos}
                     defaultLogoUrl={client.brandLogo}
                   />
                   <div>
-                    {pageName ? <h3 style={{ fontWeight: '600' }}>{pageName}</h3> : null}
+                    {facebookBrandName ? (
+                      <h3 style={{ fontWeight: '600' }}>{facebookBrandName}</h3>
+                    ) : null}
                     <span className="fb-meta">
                       Ad <span className="fb-globe" aria-hidden="true">🌐</span>
                     </span>
@@ -1730,7 +1743,9 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
 
                 <PrimaryTextPreview
                   text={form.primaryText}
-                  clampLength={isDesktopLayout ? null : META_PRIMARY_TEXT_CLAMP}
+                  clampLength={META_PRIMARY_TEXT_CLAMP}
+                  moreLabel="Show more"
+                  lessLabel="Show less"
                 />
 
                 <div className="media-block">{renderMedia(mediaRatio.cssValue)}</div>
@@ -1763,12 +1778,14 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
               <article className="ig-feed-preview">
                 <header className="ig-header">
                   <PageAvatar
-                    pageName={pageName}
+                    pageName={instagramPageName}
                     brandLogos={client.igBrandLogos}
                     defaultLogoUrl={client.brandLogo}
                   />
                   <div className="ig-header-meta">
-                    {instagramHandle ? <strong className="ig-username">{instagramHandle}</strong> : null}
+                    {instagramBrandHandle ? (
+                      <strong className="ig-username">{instagramBrandHandle}</strong>
+                    ) : null}
                     <span className="ig-ad-label">Ad</span>
                   </div>
                   <div className="ig-header-actions" aria-hidden="true">
@@ -1786,7 +1803,7 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
 
                 <div className="ig-caption">
                   <IgCaptionPreview
-                    username={instagramHandle}
+                    username={instagramBrandHandle}
                     text={form.primaryText}
                     headline={creativeType === 'carousel' ? previewHeadline : ''}
                   />
@@ -1802,6 +1819,7 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout }) {
 
 function App() {
   const [session, setSession] = useState(() => readSession())
+  const [laneCrawfordScreen, setLaneCrawfordScreen] = useState('hub')
 
   if (!session) {
     return <ClientGate onAuthenticated={setSession} />
@@ -1810,6 +1828,7 @@ function App() {
   const handleLogout = () => {
     clearAllStoredDrafts()
     clearClientSession()
+    setLaneCrawfordScreen('hub')
     setSession(null)
   }
 
@@ -1819,6 +1838,7 @@ function App() {
         adminProfile={session.adminProfile}
         onSelectClient={(client) => {
           writeAdminSession(client.id, session.adminProfile)
+          setLaneCrawfordScreen(clientUsesPlatformHub(client) ? 'hub' : 'meta-preview')
           setSession({ kind: 'admin', adminProfile: session.adminProfile, activeClient: client })
         }}
         onLogout={handleLogout}
@@ -1828,16 +1848,30 @@ function App() {
 
   const activeClient = session.kind === 'client' ? session.client : session.activeClient
   const isAdmin = session.kind === 'admin'
+  const showLaneCrawfordHub =
+    clientUsesPlatformHub(activeClient) && laneCrawfordScreen !== 'meta-preview'
 
   const handleSwitchClient = (client) => {
     if (isAdmin) {
       writeAdminSession(client.id, session.adminProfile)
+      setLaneCrawfordScreen(clientUsesPlatformHub(client) ? 'hub' : 'meta-preview')
       setSession({
         kind: 'admin',
         adminProfile: session.adminProfile,
         activeClient: client,
       })
     }
+  }
+
+  if (showLaneCrawfordHub) {
+    return (
+      <LaneCrawfordPlatformHub
+        client={activeClient}
+        isAdmin={isAdmin}
+        onOpenMetaPreview={() => setLaneCrawfordScreen('meta-preview')}
+        onLogout={handleLogout}
+      />
+    )
   }
 
   return (
@@ -1847,6 +1881,9 @@ function App() {
       isAdmin={isAdmin}
       onSwitchClient={handleSwitchClient}
       onLogout={handleLogout}
+      onBackToPlatformHub={
+        clientUsesPlatformHub(activeClient) ? () => setLaneCrawfordScreen('hub') : undefined
+      }
     />
   )
 }
