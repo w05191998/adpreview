@@ -1442,19 +1442,18 @@ function AdPreviewApp({
 
 
   return (
-    <main className="app-shell">
-      <section className="builder-panel">
-        <MetaWorkspaceHeader
-          client={client}
-          isAdmin={isAdmin}
-          pageTitle="Meta Ad Preview"
-          activeTool="ad-preview"
-          onBackToPlatformHub={onBackToPlatformHub}
-          onNavigateMetaTool={onNavigateMetaTool}
-          onSwitchClient={onSwitchClient}
-          onSignOut={handleSignOut}
-        />
+    <main className="app-shell app-shell--with-workspace-header">
+      <MetaWorkspaceHeader
+        client={client}
+        isAdmin={isAdmin}
+        activeTool="ad-preview"
+        onBackToPlatformHub={onBackToPlatformHub}
+        onNavigateMetaTool={onNavigateMetaTool}
+        onSwitchClient={onSwitchClient}
+        onSignOut={handleSignOut}
+      />
 
+      <section className="builder-panel">
         <div className="form-shell">
           <section className="form-section">
             <div className="section-heading">

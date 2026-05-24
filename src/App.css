@@ -4,9 +4,33 @@
   --builder-column-width: min(100%, 640px);
   display: grid;
   grid-template-columns: minmax(0, var(--builder-column-width)) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   min-height: 100vh;
   width: 100%;
   max-width: 100%;
+}
+
+.app-shell--with-workspace-header {
+  grid-template-rows: minmax(0, 1fr);
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-shell--with-workspace-header > .workspace-header {
+  grid-column: 1 / -1;
+}
+
+.app-shell--with-workspace-header > .builder-panel,
+.app-shell--with-workspace-header > .preview-panel {
+  grid-row: 1;
+  min-height: 0;
+  height: 100vh;
+  max-height: 100vh;
+  box-sizing: border-box;
+  padding-top: calc(var(--workspace-header-offset, 3.35rem) + 1.75rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .builder-panel,
@@ -30,6 +54,7 @@
     overflow-y: auto;
     overscroll-behavior: contain;
   }
+
 }
 
 .builder-panel {
@@ -1773,6 +1798,28 @@
     grid-template-columns: minmax(0, 1fr);
     height: auto;
     overflow: visible;
+  }
+
+  .app-shell--with-workspace-header {
+    height: auto;
+    overflow: visible;
+    grid-template-rows: auto auto;
+  }
+
+  .app-shell--with-workspace-header > .builder-panel,
+  .app-shell--with-workspace-header > .preview-panel {
+    grid-row: auto;
+    height: auto;
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .app-shell--with-workspace-header > .builder-panel {
+    padding-top: calc(var(--workspace-header-offset, 3.35rem) + 1.75rem);
+  }
+
+  .app-shell--with-workspace-header > .preview-panel {
+    padding-top: 1.75rem;
   }
 
   .builder-panel,

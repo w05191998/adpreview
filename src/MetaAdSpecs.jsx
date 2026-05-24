@@ -39,7 +39,7 @@ function FormatColumnHeader({ formatId, label, Icon, onJumpToDetails }) {
 
 function ComparisonTable({ onJumpToDetails }) {
   return (
-    <div className="meta-ad-specs-table-wrap">
+    <div className="meta-ad-specs-table-wrap meta-ad-specs-table-wrap--comparison">
       <table className="meta-ad-specs-table meta-ad-specs-table--comparison">
         <thead>
           <tr>
@@ -120,82 +120,84 @@ export default function MetaAdSpecs({
   }
 
   return (
-    <main className="app-shell app-shell--specs-only">
+    <main className="app-shell app-shell--ad-specs app-shell--with-workspace-header">
+      <MetaWorkspaceHeader
+        client={client}
+        isAdmin={isAdmin}
+        activeTool="ad-specs"
+        onBackToPlatformHub={onBackToPlatformHub}
+        onNavigateMetaTool={onNavigateMetaTool}
+        onSwitchClient={onSwitchClient}
+        onSignOut={onLogout}
+      />
+
       <section className="builder-panel meta-ad-specs-panel">
-        <MetaWorkspaceHeader
-          client={client}
-          isAdmin={isAdmin}
-          pageTitle="Ad Specs"
-          activeTool="ad-specs"
-          onBackToPlatformHub={onBackToPlatformHub}
-          onNavigateMetaTool={onNavigateMetaTool}
-          onSwitchClient={onSwitchClient}
-          onSignOut={onLogout}
-        />
+        <header className="meta-ad-specs-intro">
+          <h2 className="meta-ad-specs-heading">Meta Ad Specifications</h2>
+          <p className="meta-ad-specs-lead">
+            Consolidated creative specs for Image, Video, Carousel, and Collection ads on Facebook
+            Feed. Values are sourced from the official Meta Ads Guide (Awareness objective).
+          </p>
+        </header>
 
-        <div className="meta-ad-specs-content">
-          <header className="meta-ad-specs-intro">
-            <h2 className="meta-ad-specs-heading">Meta Ad Specifications</h2>
-            <p className="meta-ad-specs-lead">
-              Consolidated creative specs for Image, Video, Carousel, and Collection ads on Facebook
-              Feed. Values are sourced from the official Meta Ads Guide (Awareness objective).
-            </p>
-          </header>
+        <section className="meta-ad-specs-section meta-ad-specs-section--comparison">
+          <h3 className="meta-ad-specs-section-title">Format Comparison</h3>
+          <ComparisonTable onJumpToDetails={jumpToFormatDetails} />
+        </section>
+      </section>
 
-          <section className="meta-ad-specs-section">
-            <h3 className="meta-ad-specs-section-title">Format Comparison</h3>
-            <ComparisonTable onJumpToDetails={jumpToFormatDetails} />
-          </section>
-
-          {META_FEED_FORMAT_DETAILS.map((format) => (
-            <section
-              key={format.id}
-              className={[
-                'meta-ad-specs-section',
-                'meta-ad-specs-section--format-detail',
-                highlightedFormatId === format.id ? 'meta-ad-specs-section--highlighted' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              id={`format-${format.id}`}
-            >
-              <div className="meta-ad-specs-section-head">
-                <h3 className="meta-ad-specs-section-title">{format.title}</h3>
-                <a
-                  className="meta-ad-specs-source-link"
-                  href={format.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  View on Meta Ads Guide
-                </a>
+      <section
+        className="preview-panel meta-ad-specs-details-panel"
+        aria-label="Format specification details"
+      >
+        {META_FEED_FORMAT_DETAILS.map((format) => (
+          <section
+            key={format.id}
+            className={[
+              'meta-ad-specs-section',
+              'meta-ad-specs-section--format-detail',
+              highlightedFormatId === format.id ? 'meta-ad-specs-section--highlighted' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            id={`format-${format.id}`}
+          >
+            <div className="meta-ad-specs-section-head">
+              <h3 className="meta-ad-specs-section-title">{format.title}</h3>
+              <a
+                className="meta-ad-specs-source-link"
+                href={format.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View on Meta Ads Guide
+              </a>
+            </div>
+            {format.sections.map((section) => (
+              <div key={section.title} className="meta-ad-specs-subsection">
+                <h4 className="meta-ad-specs-subsection-title">{section.title}</h4>
+                <DetailSectionTable rows={section.rows} />
               </div>
-              {format.sections.map((section) => (
-                <div key={section.title} className="meta-ad-specs-subsection">
-                  <h4 className="meta-ad-specs-subsection-title">{section.title}</h4>
-                  <DetailSectionTable rows={section.rows} />
-                </div>
-              ))}
-            </section>
-          ))}
+            ))}
+          </section>
+        ))}
 
-          <footer className="meta-ad-specs-sources">
-            <h3 className="meta-ad-specs-section-title">Sources</h3>
-            <ul className="meta-ad-specs-sources-list">
-              {META_AD_SPECS_SOURCES.map((source) => (
-                <li key={source.url}>
-                  <a href={source.url} target="_blank" rel="noopener noreferrer">
-                    {source.format} — Facebook Feed specs
-                  </a>
-                </li>
-              ))}
-            </ul>
-            <p className="meta-ad-specs-disclaimer">
-              All ads must comply with Meta Advertising Policies. Specifications may vary by
-              objective, placement, and region.
-            </p>
-          </footer>
-        </div>
+        <footer className="meta-ad-specs-sources">
+          <h3 className="meta-ad-specs-section-title">Sources</h3>
+          <ul className="meta-ad-specs-sources-list">
+            {META_AD_SPECS_SOURCES.map((source) => (
+              <li key={source.url}>
+                <a href={source.url} target="_blank" rel="noopener noreferrer">
+                  {source.format} — Facebook Feed specs
+                </a>
+              </li>
+            ))}
+          </ul>
+          <p className="meta-ad-specs-disclaimer">
+            All ads must comply with Meta Advertising Policies. Specifications may vary by
+            objective, placement, and region.
+          </p>
+        </footer>
       </section>
     </main>
   )

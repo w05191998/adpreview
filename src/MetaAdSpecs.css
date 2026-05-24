@@ -1,14 +1,77 @@
-.app-shell--specs-only {
-  grid-template-columns: minmax(0, 1fr);
+@media (min-width: 1025px) {
+  .app-shell--ad-specs.app-shell--with-workspace-header {
+    grid-template-columns: minmax(0, 1fr) clamp(300px, 36vw, 420px);
+  }
+}
+
+@media (min-width: 1025px) and (max-width: 1280px) {
+  .app-shell--ad-specs.app-shell--with-workspace-header {
+    grid-template-columns: minmax(0, 13fr) minmax(0, 7fr);
+  }
+}
+
+@media (min-width: 1025px) {
+
+  .meta-ad-specs-section--comparison {
+    flex: none;
+    height: fit-content;
+  }
+
+  .meta-ad-specs-table-wrap--comparison {
+    overflow: visible;
+    max-height: none;
+    height: fit-content;
+  }
+
+  .meta-ad-specs-table--comparison {
+    table-layout: fixed;
+  }
+
+  .meta-ad-specs-table--comparison th,
+  .meta-ad-specs-table--comparison td {
+    padding: 0.42rem 0.48rem;
+    font-size: 0.76rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .meta-ad-specs-table--comparison thead th {
+    white-space: normal;
+  }
+
+  .meta-ad-specs-table--comparison tbody th[scope='row'] {
+    width: 8.5rem;
+    min-width: 0;
+  }
+
+  .meta-ad-specs-table--comparison td {
+    min-width: 0;
+  }
+
+  .meta-ad-specs-details-panel .meta-ad-specs-section {
+    padding: 0.85rem;
+  }
+
+  .meta-ad-specs-details-panel .meta-ad-specs-table {
+    font-size: 0.76rem;
+  }
+
+  .meta-ad-specs-details-panel .meta-ad-specs-table--detail tbody th[scope='row'] {
+    width: 38%;
+    min-width: 0;
+  }
 }
 
 .meta-ad-specs-panel {
   max-width: 100%;
 }
 
-.meta-ad-specs-content {
-  display: grid;
+.meta-ad-specs-details-panel {
+  display: flex;
+  flex-direction: column;
   gap: 1.5rem;
+  min-width: 0;
 }
 
 .meta-ad-specs-intro {
@@ -149,7 +212,7 @@
 }
 
 .meta-ad-specs-section--format-detail {
-  scroll-margin-top: 1rem;
+  scroll-margin-top: var(--workspace-header-offset, 5.25rem);
   transition:
     border-color 0.25s ease,
     box-shadow 0.25s ease;
@@ -192,7 +255,7 @@
 
 .meta-ad-specs-table--comparison td {
   color: var(--color-text);
-  min-width: 8.5rem;
+  min-width: 0;
 }
 
 .meta-ad-specs-table--detail tbody th[scope='row'] {
