@@ -72,17 +72,41 @@ function ComparisonTable({ onJumpToDetails }) {
   )
 }
 
+const EMPHASIZED_DETAIL_LABELS = new Set([
+  'Ratio',
+  'Resolution',
+  'Primary text',
+  'Headline',
+  'Description',
+  'Landing page URL',
+  'Maximum file size',
+  'Video duration',
+  'Number of carousel cards',
+  'Instant Experience',
+  'File type',
+  'Image file type',
+  'Video file type',
+  'Video settings',
+  'Minimum width',
+  'Minimum height',
+  'Cover media',
+])
+
 function DetailSectionTable({ rows }) {
   return (
     <div className="meta-ad-specs-table-wrap">
       <table className="meta-ad-specs-table meta-ad-specs-table--detail">
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.label}>
-              <th scope="row">{row.label}</th>
-              <td>{row.value}</td>
-            </tr>
-          ))}
+          {rows.map((row) => {
+            const emphasize = row.emphasize ?? EMPHASIZED_DETAIL_LABELS.has(row.label)
+
+            return (
+              <tr key={row.label}>
+                <th scope="row">{row.label}</th>
+                <td className={emphasize ? 'meta-ad-specs-value--emphasis' : undefined}>{row.value}</td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
@@ -92,6 +116,7 @@ function DetailSectionTable({ rows }) {
 const HIGHLIGHT_DURATION_MS = 4500
 
 export default function MetaAdSpecs({
+  embedded = false,
   client,
   isAdmin = false,
   onBackToPlatformHub,
@@ -119,18 +144,8 @@ export default function MetaAdSpecs({
     target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  return (
-    <main className="app-shell app-shell--ad-specs app-shell--with-workspace-header">
-      <MetaWorkspaceHeader
-        client={client}
-        isAdmin={isAdmin}
-        activeTool="ad-specs"
-        onBackToPlatformHub={onBackToPlatformHub}
-        onNavigateMetaTool={onNavigateMetaTool}
-        onSwitchClient={onSwitchClient}
-        onSignOut={onLogout}
-      />
-
+  const specsPanels = (
+    <>
       <section className="builder-panel meta-ad-specs-panel">
         <header className="meta-ad-specs-intro">
           <h2 className="meta-ad-specs-heading">Meta Ad Specifications</h2>
@@ -199,6 +214,25 @@ export default function MetaAdSpecs({
           </p>
         </footer>
       </section>
+    </>
+  )
+
+  if (embedded) {
+    return specsPanels
+  }
+
+  return (
+    <main className="app-shell app-shell--ad-specs app-shell--with-workspace-header">
+      <MetaWorkspaceHeader
+        client={client}
+        isAdmin={isAdmin}
+        activeTool="ad-specs"
+        onBackToPlatformHub={onBackToPlatformHub}
+        onNavigateMetaTool={onNavigateMetaTool}
+        onSwitchClient={onSwitchClient}
+        onSignOut={onLogout}
+      />
+      {specsPanels}
     </main>
   )
 }

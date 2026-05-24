@@ -63,6 +63,26 @@
   }
 }
 
+.app-shell--workspace-enter .meta-ad-specs-section--format-detail {
+  animation: shell-fade-up var(--duration-normal) var(--ease-out) both;
+}
+
+.app-shell--workspace-enter .meta-ad-specs-section--format-detail:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.app-shell--workspace-enter .meta-ad-specs-section--format-detail:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.app-shell--workspace-enter .meta-ad-specs-section--format-detail:nth-child(3) {
+  animation-delay: 0.22s;
+}
+
+.app-shell--workspace-enter .meta-ad-specs-section--format-detail:nth-child(4) {
+  animation-delay: 0.28s;
+}
+
 .meta-ad-specs-panel {
   max-width: 100%;
 }
@@ -267,7 +287,20 @@
 }
 
 .meta-ad-specs-table--detail td {
+  font-weight: 400;
   color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
+.meta-ad-specs-table--detail .meta-ad-specs-value--emphasis {
+  font-weight: 500;
+  color: #475569;
+}
+
+.meta-ad-specs-details-panel .meta-ad-specs-subsection + .meta-ad-specs-subsection {
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgb(226 232 240 / 70%);
 }
 
 .meta-ad-specs-sources {

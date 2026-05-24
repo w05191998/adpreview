@@ -1,0 +1,62 @@
+/* Shared interaction tokens — micro-motion only, no layout shift */
+
+:root {
+  --focus-ring-color: rgb(37 99 235 / 28%);
+  --focus-ring: 0 0 0 3px var(--focus-ring-color);
+  --interactive-transition:
+    color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.ui-interactive {
+  transition: var(--interactive-transition);
+  cursor: pointer;
+}
+
+.ui-interactive:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.ui-interactive:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.ui-interactive:disabled,
+.ui-interactive[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* Phase 2 — workspace panel enter (Preview <-> Specs) */
+.app-shell--workspace-enter > .builder-panel {
+  animation: shell-fade-up var(--duration-normal) var(--ease-out) both;
+}
+
+.app-shell--workspace-enter > .preview-panel {
+  animation: shell-fade-up var(--duration-normal) var(--ease-out) 0.09s both;
+}
+
+/* Phase 2 — preview creative crossfade (media / format changes only) */
+.preview-stage-shell {
+  min-width: 0;
+  animation: preview-content-fade var(--duration-fast) var(--ease-out) both;
+}
+
+@keyframes preview-content-fade {
+  from {
+    opacity: 0.52;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preview-stage-shell {
+    animation: none;
+  }
+}

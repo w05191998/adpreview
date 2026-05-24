@@ -291,17 +291,7 @@
   color: var(--color-text-muted);
 }
 
-.panel-admin-client-select {
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 0.32rem 0.5rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  font-family: var(--font-body);
-  color: var(--color-text);
-  background: #fff;
-  cursor: pointer;
-}
+/* .panel-admin-client-select — see app-select.css */
 
 .panel-admin-badge {
   display: inline-flex;
@@ -332,10 +322,7 @@
   font-weight: 700;
   padding: 0.58rem 0.85rem;
   cursor: pointer;
-  transition:
-    background-color var(--duration-fast) var(--ease-out),
-    box-shadow var(--duration-fast) var(--ease-out),
-    transform var(--duration-fast) var(--ease-out);
+  transition: var(--interactive-transition);
 }
 
 .cloud-submit:hover:not(:disabled) {
@@ -344,8 +331,9 @@
 }
 
 .cloud-submit:focus-visible {
-  outline: 3px solid rgb(37 99 235 / 30%);
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+  box-shadow: var(--focus-ring);
 }
 
 .cloud-submit:disabled {
@@ -465,8 +453,7 @@
 }
 
 .form-grid input,
-.form-grid textarea,
-.form-grid select {
+.form-grid textarea {
   border: 1px solid var(--color-border);
   border-radius: 10px;
   background: var(--color-surface);
@@ -484,6 +471,8 @@
     box-shadow var(--duration-fast) var(--ease-out);
 }
 
+/* .form-grid select — see app-select.css */
+
 .form-grid textarea {
   resize: vertical;
   min-height: 12rem;
@@ -491,14 +480,12 @@
 }
 
 .form-grid input:hover,
-.form-grid textarea:hover,
-.form-grid select:hover {
+.form-grid textarea:hover {
   border-color: var(--color-primary);
 }
 
 .form-grid input:focus,
-.form-grid textarea:focus,
-.form-grid select:focus {
+.form-grid textarea:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgb(37 99 235 / 18%);
 }
@@ -593,7 +580,13 @@
   border: 1px solid var(--color-border);
   border-radius: 10px;
   background: var(--color-surface);
-  transition: border-color var(--duration-fast) var(--ease-out);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.media-upload-field:hover .media-upload-bar {
+  border-color: #94a3b8;
 }
 
 .media-upload-field:focus-within .media-upload-bar {
@@ -601,22 +594,81 @@
   box-shadow: 0 0 0 3px rgb(37 99 235 / 18%);
 }
 
-.media-upload-input {
-  width: 100%;
-  max-width: 100%;
+.media-upload-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
   min-width: 0;
+}
+
+.media-upload-trigger-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.media-upload-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.15rem;
+  padding: 0.45rem 0.95rem;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 5%);
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  pointer-events: none;
+  transition: var(--interactive-transition);
+}
+
+.media-upload-status {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.media-upload-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
   padding: 0;
   border: none;
-  border-radius: 0;
+  border-radius: 9px;
   background: transparent;
   box-shadow: none;
-  font-size: 0.85rem;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 0;
 }
 
 .media-upload-input:hover,
-.media-upload-input:focus {
+.media-upload-input:focus,
+.media-upload-input:focus-visible {
   border: none;
+  outline: none;
   box-shadow: none;
+}
+
+.media-upload-picker:has(.media-upload-input:hover) .media-upload-trigger,
+.media-upload-picker:has(.media-upload-input:focus-visible) .media-upload-trigger {
+  border-color: rgb(37 99 235 / 45%);
+  color: var(--color-primary);
+  background: rgb(37 99 235 / 6%);
+}
+
+.media-upload-picker:has(.media-upload-input:focus-visible) .media-upload-trigger {
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 16%);
 }
 
 .media-upload-hint--in-bar {

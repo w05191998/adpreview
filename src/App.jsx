@@ -1,5 +1,5 @@
 import { LinkOutlined, WhatsAppOutlined } from '@ant-design/icons'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import AdminClientPicker from './AdminClientPicker'
 import ClientGate from './ClientGate'
 import LaneCrawfordPlatformHub from './LaneCrawfordPlatformHub'
@@ -1006,6 +1006,7 @@ function CarouselCardList({ items, activeIndex, onSelect, onReorder, onRemove, o
 function AdPreviewApp({
   client,
   isAdmin = false,
+  embedded = false,
   onSwitchClient,
   onLogout,
   onBackToPlatformHub,
@@ -1366,6 +1367,21 @@ function AdPreviewApp({
     creativeType === 'carousel'
       ? activeCarouselItem?.description?.trim() || ''
       : form.description.trim()
+  const previewVisualKey = useMemo(() => {
+    if (creativeType === 'carousel') {
+      const item = carouselItems[activeCarouselIndex]
+      return [
+        'carousel',
+        mediaRatio.key,
+        activeCarouselIndex,
+        item?.url ?? '',
+        item?.kind ?? '',
+        carouselItems.length,
+      ].join('|')
+    }
+
+    return ['single', creativeType, mediaRatio.key, singlePreviewUrl ?? ''].join('|')
+  }, [creativeType, mediaRatio, singlePreviewUrl, activeCarouselIndex, carouselItems])
   const renderMedia = (ratioCssValue) => {
     const mediaStyle = { '--media-ratio': ratioCssValue }
 
@@ -1441,18 +1457,8 @@ function AdPreviewApp({
   }
 
 
-  return (
-    <main className="app-shell app-shell--with-workspace-header">
-      <MetaWorkspaceHeader
-        client={client}
-        isAdmin={isAdmin}
-        activeTool="ad-preview"
-        onBackToPlatformHub={onBackToPlatformHub}
-        onNavigateMetaTool={onNavigateMetaTool}
-        onSwitchClient={onSwitchClient}
-        onSignOut={handleSignOut}
-      />
-
+  const previewPanels = (
+    <>
       <section className="builder-panel">
         <div className="form-shell">
           <section className="form-section">
@@ -1696,20 +1702,41 @@ function AdPreviewApp({
                   'Upload Image'
                 )}
                 <div className="media-upload-bar">
-                  <input
-                    key={creativeType}
-                    className="media-upload-input"
-                    type="file"
-                    multiple={creativeType === 'carousel'}
-                    {...(getMediaFileAccept(creativeType)
-                      ? { accept: getMediaFileAccept(creativeType) }
-                      : {})}
-                    onChange={
-                      creativeType === 'carousel'
-                        ? handleCarouselChange
-                        : handleSingleFileChange
-                    }
-                  />
+                  <div className="media-upload-picker">
+                    <div className="media-upload-trigger-wrap">
+                      <span className="media-upload-trigger" aria-hidden="true">
+                        {creativeType === 'carousel' ? 'Choose files' : 'Choose file'}
+                      </span>
+                      <input
+                        key={creativeType}
+                        className="media-upload-input"
+                        type="file"
+                        multiple={creativeType === 'carousel'}
+                        aria-label={
+                          creativeType === 'carousel'
+                            ? 'Choose carousel image or video files'
+                            : creativeType === 'video'
+                              ? 'Choose video file'
+                              : 'Choose image file'
+                        }
+                        {...(getMediaFileAccept(creativeType)
+                          ? { accept: getMediaFileAccept(creativeType) }
+                          : {})}
+                        onChange={
+                          creativeType === 'carousel'
+                            ? handleCarouselChange
+                            : handleSingleFileChange
+                        }
+                      />
+                    </div>
+                    <span className="media-upload-status">
+                      {creativeType === 'carousel'
+                        ? carouselItems.length > 0
+                          ? `${carouselItems.length} file${carouselItems.length === 1 ? '' : 's'} selected`
+                          : 'No files chosen'
+                        : singleMediaFile?.name || 'No file chosen'}
+                    </span>
+                  </div>
                   {creativeType === 'video' ? (
                     <p className="media-upload-hint media-upload-hint--in-bar">
                       The file picker shows all files. Open <strong>Downloads</strong>, select your
@@ -1792,7 +1819,8 @@ function AdPreviewApp({
               <h3 className="placement-title">Feed placement</h3>
             </div>
             <p className="placement-spec">Meta mobile feed · 402px column width</p>
-            <div className="preview-layout preview-layout--stage preview-layout--facebook">
+            <div key={previewVisualKey} className="preview-stage-shell">
+              <div className="preview-layout preview-layout--stage preview-layout--facebook">
               <article className="feed-preview fb-card">
                 <header className="fb-header">
                   <PageAvatar
@@ -1838,6 +1866,7 @@ function AdPreviewApp({
 
                 <FbEngagementBar />
               </article>
+              </div>
             </div>
           </div>
 
@@ -1847,7 +1876,8 @@ function AdPreviewApp({
               <h3 className="placement-title">Feed placement</h3>
             </div>
             <p className="placement-spec">Meta mobile feed · 390px column width</p>
-            <div className="preview-layout preview-layout--stage preview-layout--instagram">
+            <div key={previewVisualKey} className="preview-stage-shell">
+              <div className="preview-layout preview-layout--stage preview-layout--instagram">
               <article className="ig-feed-preview">
                 <header className="ig-header">
                   <PageAvatar
@@ -1882,10 +1912,30 @@ function AdPreviewApp({
                   />
                 </div>
               </article>
+              </div>
             </div>
           </div>
         </div>
       </section>
+    </>
+  )
+
+  if (embedded) {
+    return previewPanels
+  }
+
+  return (
+    <main className="app-shell app-shell--with-workspace-header">
+      <MetaWorkspaceHeader
+        client={client}
+        isAdmin={isAdmin}
+        activeTool="ad-preview"
+        onBackToPlatformHub={onBackToPlatformHub}
+        onNavigateMetaTool={onNavigateMetaTool}
+        onSwitchClient={onSwitchClient}
+        onSignOut={handleSignOut}
+      />
+      {previewPanels}
     </main>
   )
 }
@@ -1923,11 +1973,15 @@ function App() {
   const isAdmin = session.kind === 'admin'
   const usesPlatformHub = clientUsesPlatformHub(activeClient)
   const showLaneCrawfordHub = usesPlatformHub && laneCrawfordScreen === 'hub'
-  const showAdSpecs = usesPlatformHub && laneCrawfordScreen === 'ad-specs'
+  const showPlatformHubMetaWorkspace =
+    usesPlatformHub &&
+    (laneCrawfordScreen === 'meta-preview' || laneCrawfordScreen === 'ad-specs')
 
   const handleNavigateMetaTool = (tool) => {
-    if (tool === 'ad-preview' || tool === 'ad-specs') {
-      setLaneCrawfordScreen(tool)
+    if (tool === 'ad-preview') {
+      setLaneCrawfordScreen('meta-preview')
+    } else if (tool === 'ad-specs') {
+      setLaneCrawfordScreen('ad-specs')
     }
   }
 
@@ -1957,17 +2011,50 @@ function App() {
     )
   }
 
-  if (showAdSpecs) {
+  if (showPlatformHubMetaWorkspace) {
+    const activeTool = laneCrawfordScreen === 'ad-specs' ? 'ad-specs' : 'ad-preview'
+    const shellClassName = [
+      'app-shell',
+      'app-shell--with-workspace-header',
+      'app-shell--workspace-enter',
+      laneCrawfordScreen === 'ad-specs' ? 'app-shell--ad-specs' : '',
+    ]
+      .filter(Boolean)
+      .join(' ')
+
     return (
-      <MetaAdSpecs
-        key={`${activeClient.id}-ad-specs`}
-        client={activeClient}
-        isAdmin={isAdmin}
-        onBackToPlatformHub={handleBackToPlatformHub}
-        onNavigateMetaTool={handleNavigateMetaTool}
-        onSwitchClient={handleSwitchClient}
-        onLogout={handleLogout}
-      />
+      <main className={shellClassName}>
+        <MetaWorkspaceHeader
+          client={activeClient}
+          isAdmin={isAdmin}
+          activeTool={activeTool}
+          onBackToPlatformHub={handleBackToPlatformHub}
+          onNavigateMetaTool={handleNavigateMetaTool}
+          onSwitchClient={handleSwitchClient}
+          onSignOut={handleLogout}
+        />
+        {laneCrawfordScreen === 'ad-specs' ? (
+          <MetaAdSpecs
+            key={`${activeClient.id}-ad-specs`}
+            embedded
+            client={activeClient}
+            isAdmin={isAdmin}
+            onSwitchClient={handleSwitchClient}
+            onLogout={handleLogout}
+          />
+        ) : (
+          <AdPreviewApp
+            key={`${activeClient.id}-meta-preview`}
+            embedded
+            client={activeClient}
+            isAdmin={isAdmin}
+            onSwitchClient={handleSwitchClient}
+            onLogout={handleLogout}
+            onBackToPlatformHub={handleBackToPlatformHub}
+            onNavigateMetaTool={handleNavigateMetaTool}
+          />
+        )}
+      </main>
     )
   }
 
@@ -1978,8 +2065,6 @@ function App() {
       isAdmin={isAdmin}
       onSwitchClient={handleSwitchClient}
       onLogout={handleLogout}
-      onBackToPlatformHub={handleBackToPlatformHub}
-      onNavigateMetaTool={usesPlatformHub ? handleNavigateMetaTool : undefined}
     />
   )
 }

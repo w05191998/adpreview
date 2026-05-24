@@ -72,11 +72,18 @@
   font-weight: 600;
   padding: 0.32rem 0.55rem;
   cursor: pointer;
+  transition: var(--interactive-transition);
 }
 
 .lc-platform-hub-logout:hover {
-  border-color: #1877f2;
-  color: #1877f2;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: rgb(37 99 235 / 6%);
+}
+
+.lc-platform-hub-logout:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .lc-platform-hub-form {
@@ -94,21 +101,7 @@
   color: var(--color-text, #0f172a);
 }
 
-.lc-platform-hub-field select {
-  border: 1px solid var(--color-border, #cbd5e1);
-  border-radius: 10px;
-  background: #fff;
-  color: var(--color-text, #0f172a);
-  font-size: 1rem;
-  font-weight: 500;
-  padding: 0.72rem 0.8rem;
-  outline: none;
-}
-
-.lc-platform-hub-field select:focus {
-  border-color: #1877f2;
-  box-shadow: 0 0 0 3px rgb(24 119 242 / 18%);
-}
+/* .lc-platform-hub-field select — see app-select.css */
 
 .lc-platform-hub-tools {
   display: grid;
@@ -141,6 +134,7 @@
   background: #fff;
   border: 1px solid #e8ecf1;
   text-align: left;
+  transition: var(--interactive-transition);
 }
 
 .lc-platform-hub-subpage-row {
@@ -150,11 +144,6 @@
   gap: 0.4rem 0.5rem;
 }
 
-.lc-platform-hub-subpage-row strong {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #0f172a;
-}
 
 .lc-platform-hub-subpage-desc {
   font-size: 0.72rem;
@@ -166,19 +155,33 @@
 .lc-platform-hub-subpage--action {
   cursor: pointer;
   font-family: inherit;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
 }
 
 .lc-platform-hub-subpage--action:hover {
-  border-color: #1877f2;
-  box-shadow: 0 0 0 1px rgb(24 119 242 / 20%);
+  border-color: rgb(37 99 235 / 35%);
+  background: #f8fafc;
+  box-shadow: 0 4px 14px rgb(15 23 42 / 6%);
+}
+
+.lc-platform-hub-subpage--action:active {
+  background: #f1f5f9;
 }
 
 .lc-platform-hub-subpage--action:focus-visible {
-  outline: 2px solid #1877f2;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+  border-color: var(--color-primary);
+}
+
+.lc-platform-hub-subpage-row strong {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f172a;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.lc-platform-hub-subpage--action:hover .lc-platform-hub-subpage-row strong {
+  color: var(--color-primary);
 }
 
 .lc-platform-hub-subpage--static {

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { CLIENTS } from './clientConfig'
 import './MetaWorkspaceHeader.css'
 
@@ -7,37 +7,93 @@ const META_TOOLS = [
   { id: 'ad-specs', label: 'Ad Specs', shortLabel: 'Specs' },
 ]
 
-function ToolTab({ tool, isActive, onSelect }) {
-  const label = (
-    <>
-      <span className="workspace-tool-tab__long">{tool.label}</span>
-      <span className="workspace-tool-tab__short">{tool.shortLabel}</span>
-    </>
-  )
-
-  if (isActive) {
-    return (
-      <span
-        className="workspace-tool-tab workspace-tool-tab--active"
-        role="tab"
-        aria-selected="true"
-        aria-current="page"
-      >
-        {label}
-      </span>
-    )
-  }
-
+function ToolTab({ tool, isActive, onSelect, tabRef }) {
   return (
     <button
+      ref={tabRef}
       type="button"
-      className="workspace-tool-tab"
+      className={[
+        'workspace-tool-tab',
+        isActive ? 'workspace-tool-tab--active' : 'ui-interactive',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       role="tab"
-      aria-selected="false"
-      onClick={() => onSelect(tool.id)}
+      aria-selected={isActive}
+      aria-current={isActive ? 'page' : undefined}
+      tabIndex={isActive ? 0 : -1}
+      onClick={() => {
+        if (!isActive) {
+          onSelect(tool.id)
+        }
+      }}
     >
-      {label}
+      <span className="workspace-tool-tab__long">{tool.label}</span>
+      <span className="workspace-tool-tab__short">{tool.shortLabel}</span>
     </button>
+  )
+}
+
+function WorkspaceToolTabs({ activeTool, onSelect }) {
+  const tablistRef = useRef(null)
+  const tabRefs = useRef({})
+  const [indicatorStyle, setIndicatorStyle] = useState({
+    width: '0px',
+    left: '0px',
+  })
+
+  const syncIndicator = useCallback(() => {
+    const tablist = tablistRef.current
+    const activeNode = tabRefs.current[activeTool]
+    if (!tablist || !activeNode) {
+      return
+    }
+
+    const listRect = tablist.getBoundingClientRect()
+    const tabRect = activeNode.getBoundingClientRect()
+    setIndicatorStyle({
+      width: `${tabRect.width}px`,
+      left: `${tabRect.left - listRect.left}px`,
+    })
+  }, [activeTool])
+
+  useLayoutEffect(() => {
+    syncIndicator()
+
+    const tablist = tablistRef.current
+    if (!tablist) {
+      return undefined
+    }
+
+    const resizeObserver = new ResizeObserver(syncIndicator)
+    resizeObserver.observe(tablist)
+    window.addEventListener('resize', syncIndicator)
+
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', syncIndicator)
+    }
+  }, [syncIndicator])
+
+  return (
+    <div className="workspace-tool-tabs" role="tablist" ref={tablistRef}>
+      <span
+        className="workspace-tool-tabs__indicator"
+        style={indicatorStyle}
+        aria-hidden="true"
+      />
+      {META_TOOLS.map((tool) => (
+        <ToolTab
+          key={tool.id}
+          tool={tool}
+          isActive={activeTool === tool.id}
+          onSelect={onSelect}
+          tabRef={(node) => {
+            tabRefs.current[tool.id] = node
+          }}
+        />
+      ))}
+    </div>
   )
 }
 
@@ -86,6 +142,7 @@ export default function MetaWorkspaceHeader({
       className={[
         'workspace-header',
         showMetaTools ? 'workspace-header--with-tool-tabs' : '',
+        showMetaTools && isAdmin ? 'workspace-header--admin' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -95,11 +152,15 @@ export default function MetaWorkspaceHeader({
         <div className="workspace-header__row">
           <div className="workspace-header__start">
             {showMetaTools ? (
-              <button type="button" className="workspace-back" onClick={onBackToPlatformHub}>
+              <button
+                type="button"
+                className="workspace-back ui-interactive"
+                onClick={onBackToPlatformHub}
+              >
                 <span className="workspace-back__icon" aria-hidden="true">
                   ←
                 </span>
-                Platform
+                <span className="workspace-back__label">Platform</span>
               </button>
             ) : null}
 
@@ -116,16 +177,7 @@ export default function MetaWorkspaceHeader({
 
           {showMetaTools ? (
             <nav className="workspace-header__tools" aria-label="Meta tools">
-              <div className="workspace-tool-tabs" role="tablist">
-                {META_TOOLS.map((tool) => (
-                  <ToolTab
-                    key={tool.id}
-                    tool={tool}
-                    isActive={activeTool === tool.id}
-                    onSelect={(toolId) => onNavigateMetaTool?.(toolId)}
-                  />
-                ))}
-              </div>
+              <WorkspaceToolTabs activeTool={activeTool} onSelect={onNavigateMetaTool} />
             </nav>
           ) : null}
 
@@ -134,7 +186,7 @@ export default function MetaWorkspaceHeader({
               <label className="panel-admin-client workspace-header__admin">
                 <span className="panel-admin-client-label">Client</span>
                 <select
-                  className="panel-admin-client-select"
+                  className="panel-admin-client-select app-select"
                   value={client.id}
                   onChange={(event) => onSwitchClient(CLIENTS[event.target.value])}
                 >
@@ -147,7 +199,7 @@ export default function MetaWorkspaceHeader({
                 <span className="panel-admin-badge">Admin</span>
               </label>
             ) : null}
-            <button type="button" className="workspace-signout" onClick={onSignOut}>
+            <button type="button" className="workspace-signout ui-interactive" onClick={onSignOut}>
               Sign out
             </button>
           </div>
