@@ -9,7 +9,14 @@ const PLATFORMS = [
 
 const PLATFORM_CONTENT = {
   meta: {
-    subPages: [{ id: 'ad-preview', label: 'Ad Preview', description: 'Facebook & Instagram feed placements' }],
+    subPages: [
+      { id: 'ad-preview', label: 'Ad Preview', description: 'Facebook & Instagram feed placements' },
+      {
+        id: 'ad-specs',
+        label: 'Ad Specs',
+        description: 'Meta creative specs and format requirements',
+      },
+    ],
   },
   programmatic: {
     subPages: [],
@@ -21,16 +28,30 @@ const PLATFORM_CONTENT = {
 
 const COMING_SOON_TITLE = 'Coming soon'
 
-export default function LaneCrawfordPlatformHub({ client, isAdmin = false, onOpenMetaPreview, onLogout }) {
+export default function LaneCrawfordPlatformHub({
+  client,
+  isAdmin = false,
+  onOpenMetaPreview,
+  onOpenAdSpecs,
+  onLogout,
+}) {
   const [platform, setPlatform] = useState('meta')
 
   const activePlatform = PLATFORMS.find((entry) => entry.id === platform) || PLATFORMS[0]
   const { subPages } = PLATFORM_CONTENT[activePlatform.id]
   const showComingSoonOnly = subPages.length === 0
 
-  const handleSubPageClick = (subPageId) => {
-    if (activePlatform.id === 'meta' && subPageId === 'ad-preview') {
+  const handleSubPageClick = (subPage) => {
+    if (activePlatform.id !== 'meta' || subPage.comingSoon) {
+      return
+    }
+
+    if (subPage.id === 'ad-preview') {
       onOpenMetaPreview()
+    }
+
+    if (subPage.id === 'ad-specs') {
+      onOpenAdSpecs()
     }
   }
 
@@ -75,14 +96,29 @@ export default function LaneCrawfordPlatformHub({ client, isAdmin = false, onOpe
             ) : (
               subPages.map((subPage) => (
                 <li key={subPage.id}>
-                  <button
-                    type="button"
-                    className="lc-platform-hub-subpage lc-platform-hub-subpage--action"
-                    onClick={() => handleSubPageClick(subPage.id)}
-                  >
-                    <strong>{subPage.label}</strong>
-                    {subPage.description ? <p>{subPage.description}</p> : null}
-                  </button>
+                  {subPage.comingSoon ? (
+                    <div className="lc-platform-hub-subpage lc-platform-hub-subpage--static">
+                      <span className="lc-platform-hub-subpage-row">
+                        <strong>{subPage.label}</strong>
+                        {subPage.description ? (
+                          <span className="lc-platform-hub-subpage-desc">{subPage.description}</span>
+                        ) : null}
+                      </span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="lc-platform-hub-subpage lc-platform-hub-subpage--action"
+                      onClick={() => handleSubPageClick(subPage)}
+                    >
+                      <span className="lc-platform-hub-subpage-row">
+                        <strong>{subPage.label}</strong>
+                        {subPage.description ? (
+                          <span className="lc-platform-hub-subpage-desc">{subPage.description}</span>
+                        ) : null}
+                      </span>
+                    </button>
+                  )}
                 </li>
               ))
             )}

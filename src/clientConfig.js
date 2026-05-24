@@ -36,10 +36,10 @@ export const CLIENTS = {
     igBrandHandle: 'lanecrawford',
     brandLogo: LANE_CRAWFORD_BRAND_LOGO,
     pageNames: [LANE_CRAWFORD_PAGE_NAME],
-    displayUrls: ['lanecrawford.com'],
+    displayUrls: ['lanecrawford.com.hk'],
     defaultPageName: LANE_CRAWFORD_PAGE_NAME,
-    defaultDisplayUrl: 'lanecrawford.com',
-    defaultDestinationUrl: 'https://www.lanecrawford.com/',
+    defaultDisplayUrl: 'lanecrawford.com.hk',
+    defaultDestinationUrl: 'https://www.lanecrawford.com.hk/',
     fbBrandLogos: {
       [LANE_CRAWFORD_PAGE_NAME]: LANE_CRAWFORD_BRAND_LOGO,
     },
@@ -256,6 +256,7 @@ export function buildDefaultForm(client) {
   return {
     campaignName: '',
     pageName: client.defaultPageName,
+    campaignObjective: '',
     primaryText: '',
     headline: '',
     description: '',

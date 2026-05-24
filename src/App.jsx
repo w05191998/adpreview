@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import AdminClientPicker from './AdminClientPicker'
 import ClientGate from './ClientGate'
 import LaneCrawfordPlatformHub from './LaneCrawfordPlatformHub'
+import MetaAdSpecs from './MetaAdSpecs'
+import MetaWorkspaceHeader from './MetaWorkspaceHeader'
 import {
   CLIENTS,
   buildDefaultForm,
@@ -45,19 +47,22 @@ function formatIgCtaLabel(label) {
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase()
 }
 
+const CAMPAIGN_OBJECTIVE_OPTIONS = ['Reach', 'Traffic', 'Engagement', 'Conversion']
+
 const FACEBOOK_CTA_OPTIONS = [
   'Book now',
-  'Contact us',
+  'Get offer',
   'Learn more',
   'Order now',
+  'Send WhatsApp Message',
   'Shop now',
   'Sign up',
-  'Send WhatsApp Message',
 ]
 
 const INITIAL_FORM = {
   campaignName: '',
   pageName: '',
+  campaignObjective: '',
   primaryText: '',
   headline: '',
   description: '',
@@ -179,6 +184,53 @@ function hydrateForm(savedForm) {
   }
 
   return next
+}
+
+const LANE_CRAWFORD_LEGACY_DESTINATION_URL = 'https://www.lanecrawford.com/'
+const LANE_CRAWFORD_LEGACY_DISPLAY_URL = 'lanecrawford.com'
+
+function resolveInitialDisplayUrl(client, defaults, savedForm, hydrated) {
+  const hydratedValue = hydrated.displayUrl.trim()
+
+  if (client.id !== 'laneCrawford') {
+    return hydratedValue || defaults.displayUrl
+  }
+
+  if (hydratedValue === LANE_CRAWFORD_LEGACY_DISPLAY_URL) {
+    return defaults.displayUrl
+  }
+
+  if (savedForm && typeof savedForm === 'object' && typeof savedForm.displayUrl === 'string') {
+    return savedForm.displayUrl.trim()
+  }
+
+  return defaults.displayUrl
+}
+
+function isClientDefaultDestinationUrl(client, destinationUrl) {
+  const normalized = destinationUrl.trim()
+  return Boolean(normalized && normalized === client.defaultDestinationUrl.trim())
+}
+
+function createInitialForm(client, savedForm) {
+  const defaults = buildDefaultForm(client)
+  const hydrated = hydrateForm(savedForm)
+  const savedDestinationUrl = hydrated.destinationUrl.trim()
+  const destinationUrl =
+    savedDestinationUrl &&
+    !(
+      client.id === 'laneCrawford' && savedDestinationUrl === LANE_CRAWFORD_LEGACY_DESTINATION_URL
+    )
+      ? savedDestinationUrl
+      : defaults.destinationUrl
+
+  return {
+    ...defaults,
+    ...hydrated,
+    pageName: hydrated.pageName.trim() || defaults.pageName,
+    displayUrl: resolveInitialDisplayUrl(client, defaults, savedForm, hydrated),
+    destinationUrl,
+  }
 }
 
 function getInitialCreativeType(storedDraft) {
@@ -951,17 +1003,21 @@ function CarouselCardList({ items, activeIndex, onSelect, onReorder, onRemove, o
   )
 }
 
-function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout, onBackToPlatformHub }) {
+function AdPreviewApp({
+  client,
+  isAdmin = false,
+  onSwitchClient,
+  onLogout,
+  onBackToPlatformHub,
+  onNavigateMetaTool,
+}) {
   const storageKey = getDraftStorageKey(client.id)
   const shouldPersistDraftRef = useRef(true)
   const [initialDraft] = useState(() => readStoredDraft(storageKey))
   const [initialSingleMedia] = useState(() => createSingleMediaStateFromDraft(initialDraft))
   const singlePreviewUrlRef = useRef('')
   const carouselItemsRef = useRef([])
-  const [form, setForm] = useState(() => ({
-    ...buildDefaultForm(client),
-    ...hydrateForm(initialDraft?.form),
-  }))
+  const [form, setForm] = useState(() => createInitialForm(client, initialDraft?.form))
   const [creativeType, setCreativeType] = useState(() => getInitialCreativeType(initialDraft))
   const [mediaRatio, setMediaRatio] = useState(() => getInitialMediaRatio(initialDraft))
   const [singleMediaFile, setSingleMediaFile] = useState(() => initialSingleMedia.file)
@@ -1294,6 +1350,8 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout, onBac
     }
   }
 
+  const destinationUrlIsPlaceholder =
+    client.id === 'laneCrawford' && isClientDefaultDestinationUrl(client, form.destinationUrl)
   const displayUrl = form.displayUrl.trim()
   const ctaLabel = form.ctaLabel.trim()
   const pageName = form.pageName.trim()
@@ -1386,57 +1444,16 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout, onBac
   return (
     <main className="app-shell">
       <section className="builder-panel">
-        <div className="panel-header panel-header--compact">
-          {client.brandLogo ? (
-            <img
-              className="panel-client-logo"
-              src={client.brandLogo}
-              alt={`${client.label} logo`}
-            />
-          ) : null}
-          <h1 className="panel-header-title">Meta Ad Preview</h1>
-          <div className="panel-header-actions">
-            {isAdmin ? (
-              <>
-                {onBackToPlatformHub ? (
-                  <button type="button" className="panel-back" onClick={onBackToPlatformHub}>
-                    Platforms
-                  </button>
-                ) : null}
-                <label className="panel-admin-client">
-                  <span className="panel-admin-client-label">Client</span>
-                  <select
-                    className="panel-admin-client-select"
-                    value={client.id}
-                    onChange={(event) => onSwitchClient(CLIENTS[event.target.value])}
-                  >
-                    {listClients().map((entry) => (
-                      <option key={entry.id} value={entry.id}>
-                        {entry.label}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="panel-admin-badge">Admin</span>
-                </label>
-                <button type="button" className="panel-logout" onClick={handleSignOut}>
-                  Sign out
-                </button>
-              </>
-            ) : (
-              <>
-                {onBackToPlatformHub ? (
-                  <button type="button" className="panel-back" onClick={onBackToPlatformHub}>
-                    Platforms
-                  </button>
-                ) : null}
-                <span className="panel-client-badge">{client.label}</span>
-                <button type="button" className="panel-logout" onClick={handleSignOut}>
-                  Sign out
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+        <MetaWorkspaceHeader
+          client={client}
+          isAdmin={isAdmin}
+          pageTitle="Meta Ad Preview"
+          activeTool="ad-preview"
+          onBackToPlatformHub={onBackToPlatformHub}
+          onNavigateMetaTool={onNavigateMetaTool}
+          onSwitchClient={onSwitchClient}
+          onSignOut={handleSignOut}
+        />
 
         <div className="form-shell">
           <section className="form-section">
@@ -1445,35 +1462,69 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout, onBac
               <p>Basic ad identity shown in preview.</p>
             </div>
             <div className="form-grid">
-              <label className="full-width">
-                Page Name
-                <select name="pageName" value={form.pageName} onChange={handleInputChange}>
-                  <option value="">Select page name</option>
-                  {client.pageNames.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {client.id === 'laneCrawford' ? (
+                <div className="campaign-identity-row">
+                  <label className="campaign-identity-field">
+                    Page Name
+                    <input
+                      type="text"
+                      className="campaign-identity-page-name"
+                      value={form.pageName}
+                      readOnly
+                      aria-readonly="true"
+                    />
+                  </label>
+                  <label className="campaign-identity-field">
+                    <span>
+                      Ad Name <span className="field-optional">(optional)</span>
+                    </span>
+                    <input
+                      name="campaignName"
+                      value={form.campaignName}
+                      onChange={handleInputChange}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <>
+                  <label className="full-width">
+                    Page Name
+                    <select name="pageName" value={form.pageName} onChange={handleInputChange}>
+                      {client.pageNames.length > 1 ? (
+                        <option value="">Select page name</option>
+                      ) : null}
+                      {client.pageNames.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-              <label className="full-width">
-                Ad Name
-                <input
-                  name="campaignName"
-                  value={form.campaignName}
-                  onChange={handleInputChange}
-                />
-              </label>
+                  <label className="full-width">
+                    Ad Name
+                    <input
+                      name="campaignName"
+                      value={form.campaignName}
+                      onChange={handleInputChange}
+                    />
+                  </label>
+                </>
+              )}
 
               <label className="full-width">
                 Destination URL
                 <div className="destination-url-row">
                   <input
                     name="destinationUrl"
+                    className={
+                      destinationUrlIsPlaceholder ? 'destination-url-input--placeholder' : undefined
+                    }
                     value={form.destinationUrl}
                     onChange={handleInputChange}
-                    placeholder={client.defaultDestinationUrl}
+                    placeholder={
+                      client.id === 'laneCrawford' ? undefined : client.defaultDestinationUrl
+                    }
                   />
                   <button
                     type="button"
@@ -1498,6 +1549,41 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout, onBac
                 <select name="displayUrl" value={form.displayUrl} onChange={handleInputChange}>
                   <option value="">Select display URL</option>
                   {client.displayUrls.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <section className="form-section">
+            <div className="section-heading">
+              <h3>Campaign Objective</h3>
+            </div>
+            <div className="form-grid">
+              <label>
+                Objective
+                <select
+                  name="campaignObjective"
+                  value={form.campaignObjective}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Select objective</option>
+                  {CAMPAIGN_OBJECTIVE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                CTA Button
+                <select name="ctaLabel" value={form.ctaLabel} onChange={handleInputChange}>
+                  <option value="">Select CTA</option>
+                  {FACEBOOK_CTA_OPTIONS.map((option) => (
                     <option key={option} value={option}>
                       {option}
                     </option>
@@ -1559,18 +1645,6 @@ function AdPreviewApp({ client, isAdmin = false, onSwitchClient, onLogout, onBac
                   </label>
                 </>
               ) : null}
-
-              <label className="full-width">
-                CTA Button
-                <select name="ctaLabel" value={form.ctaLabel} onChange={handleInputChange}>
-                  <option value="">Select CTA</option>
-                  {FACEBOOK_CTA_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </label>
             </div>
           </section>
 
@@ -1848,8 +1922,17 @@ function App() {
 
   const activeClient = session.kind === 'client' ? session.client : session.activeClient
   const isAdmin = session.kind === 'admin'
-  const showLaneCrawfordHub =
-    clientUsesPlatformHub(activeClient) && laneCrawfordScreen !== 'meta-preview'
+  const usesPlatformHub = clientUsesPlatformHub(activeClient)
+  const showLaneCrawfordHub = usesPlatformHub && laneCrawfordScreen === 'hub'
+  const showAdSpecs = usesPlatformHub && laneCrawfordScreen === 'ad-specs'
+
+  const handleNavigateMetaTool = (tool) => {
+    if (tool === 'ad-preview' || tool === 'ad-specs') {
+      setLaneCrawfordScreen(tool)
+    }
+  }
+
+  const handleBackToPlatformHub = usesPlatformHub ? () => setLaneCrawfordScreen('hub') : undefined
 
   const handleSwitchClient = (client) => {
     if (isAdmin) {
@@ -1869,6 +1952,21 @@ function App() {
         client={activeClient}
         isAdmin={isAdmin}
         onOpenMetaPreview={() => setLaneCrawfordScreen('meta-preview')}
+        onOpenAdSpecs={() => setLaneCrawfordScreen('ad-specs')}
+        onLogout={handleLogout}
+      />
+    )
+  }
+
+  if (showAdSpecs) {
+    return (
+      <MetaAdSpecs
+        key={`${activeClient.id}-ad-specs`}
+        client={activeClient}
+        isAdmin={isAdmin}
+        onBackToPlatformHub={handleBackToPlatformHub}
+        onNavigateMetaTool={handleNavigateMetaTool}
+        onSwitchClient={handleSwitchClient}
         onLogout={handleLogout}
       />
     )
@@ -1876,14 +1974,13 @@ function App() {
 
   return (
     <AdPreviewApp
-      key={activeClient.id}
+      key={`${activeClient.id}-meta-preview`}
       client={activeClient}
       isAdmin={isAdmin}
       onSwitchClient={handleSwitchClient}
       onLogout={handleLogout}
-      onBackToPlatformHub={
-        clientUsesPlatformHub(activeClient) ? () => setLaneCrawfordScreen('hub') : undefined
-      }
+      onBackToPlatformHub={handleBackToPlatformHub}
+      onNavigateMetaTool={usesPlatformHub ? handleNavigateMetaTool : undefined}
     />
   )
 }
