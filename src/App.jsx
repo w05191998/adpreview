@@ -13,7 +13,9 @@ import {
   getInstagramBrandHandle,
   clearAllStoredDrafts,
   clearClientSession,
+  enableDraftPersistence,
   getDraftStorageKey,
+  isDraftPersistenceAllowed,
   listClients,
   readSession,
   writeAdminSession,
@@ -69,6 +71,22 @@ const INITIAL_FORM = {
   ctaLabel: '',
   destinationUrl: '',
   displayUrl: '',
+}
+
+function SectionHeading({ title, description, onClear }) {
+  return (
+    <div className="section-heading">
+      <div className="section-heading-text">
+        <h3>{title}</h3>
+        {description ? <p>{description}</p> : null}
+      </div>
+      {onClear ? (
+        <button type="button" className="section-clear" onClick={onClear}>
+          Clear
+        </button>
+      ) : null}
+    </div>
+  )
 }
 
 function getOpenableUrl(url) {
@@ -1047,23 +1065,19 @@ function AdPreviewApp({
   }
 
   useEffect(() => {
-    const handlePageHide = () => {
-      shouldPersistDraftRef.current = false
-      clearAllStoredDrafts()
-    }
+    enableDraftPersistence()
+    shouldPersistDraftRef.current = true
 
-    window.addEventListener('pagehide', handlePageHide)
     return () => {
-      window.removeEventListener('pagehide', handlePageHide)
       shouldPersistDraftRef.current = false
     }
-  }, [])
+  }, [storageKey])
 
   useEffect(() => {
     let cancelled = false
 
     async function persistDraft() {
-      if (!shouldPersistDraftRef.current) {
+      if (!shouldPersistDraftRef.current || !isDraftPersistenceAllowed()) {
         return
       }
 
@@ -1087,7 +1101,7 @@ function AdPreviewApp({
         )
       ).filter(Boolean)
 
-      if (cancelled || !shouldPersistDraftRef.current) {
+      if (cancelled || !shouldPersistDraftRef.current || !isDraftPersistenceAllowed()) {
         return
       }
 
@@ -1137,6 +1151,51 @@ function AdPreviewApp({
       ...previousForm,
       [name]: value,
     }))
+  }
+
+  const clearCampaignSetup = () => {
+    const defaults = buildDefaultForm(client)
+
+    setForm((previousForm) => ({
+      ...previousForm,
+      campaignName: '',
+      pageName: defaults.pageName,
+      destinationUrl: defaults.destinationUrl,
+      displayUrl: defaults.displayUrl,
+    }))
+  }
+
+  const clearCampaignObjective = () => {
+    setForm((previousForm) => ({
+      ...previousForm,
+      campaignObjective: '',
+      ctaLabel: '',
+    }))
+  }
+
+  const clearAdCopy = () => {
+    setForm((previousForm) => ({
+      ...previousForm,
+      primaryText: '',
+      headline: '',
+      description: '',
+    }))
+  }
+
+  const clearCreative = () => {
+    replaceSingleMedia(null)
+    setCarouselItems((previousItems) => {
+      previousItems.forEach((item) => {
+        if (item.url) {
+          URL.revokeObjectURL(item.url)
+        }
+      })
+      return []
+    })
+    setActiveCarouselIndex(0)
+    setCreativeType('image')
+    setMediaRatio(MEDIA_RATIOS[0])
+    setMediaUploadNotice('')
   }
 
   const replaceSingleMedia = (file) => {
@@ -1462,10 +1521,11 @@ function AdPreviewApp({
       <section className="builder-panel">
         <div className="form-shell">
           <section className="form-section">
-            <div className="section-heading">
-              <h3>Campaign Setup</h3>
-              <p>Basic ad identity shown in preview.</p>
-            </div>
+            <SectionHeading
+              title="Campaign Setup"
+              description="Basic ad identity shown in preview."
+              onClear={clearCampaignSetup}
+            />
             <div className="form-grid">
               {client.id === 'laneCrawford' ? (
                 <div className="campaign-identity-row">
@@ -1564,9 +1624,7 @@ function AdPreviewApp({
           </section>
 
           <section className="form-section">
-            <div className="section-heading">
-              <h3>Campaign Objective</h3>
-            </div>
+            <SectionHeading title="Campaign Objective" onClear={clearCampaignObjective} />
             <div className="form-grid">
               <label>
                 Objective
@@ -1599,13 +1657,11 @@ function AdPreviewApp({
           </section>
 
           <section className="form-section">
-            <div className="section-heading">
-              <h3>Ad Copy</h3>
-              <p>
-                Write the copy users see in the feed placement. Counters show Meta&apos;s
-                maximum input limits (not recommended display lengths).
-              </p>
-            </div>
+            <SectionHeading
+              title="Ad Copy"
+              description="Write the copy users see in the feed placement. Counters show Meta's maximum input limits (not recommended display lengths)."
+              onClear={clearAdCopy}
+            />
             <div className="form-grid">
               <label className="full-width">
                 <span className="field-label-row">
@@ -1654,10 +1710,11 @@ function AdPreviewApp({
           </section>
 
           <section className="form-section">
-            <div className="section-heading">
-              <h3>Creative</h3>
-              <p>Select format, ratio, and upload files.</p>
-            </div>
+            <SectionHeading
+              title="Creative"
+              description="Select format, ratio, and upload files."
+              onClear={clearCreative}
+            />
             <div className="form-grid">
               <label>
                 Creative Format
@@ -1944,8 +2001,9 @@ function App() {
   const [session, setSession] = useState(() => readSession())
   const [laneCrawfordScreen, setLaneCrawfordScreen] = useState('hub')
 
-  if (!session) {
-    return <ClientGate onAuthenticated={setSession} />
+  const handleAuthenticated = (nextSession) => {
+    enableDraftPersistence()
+    setSession(nextSession)
   }
 
   const handleLogout = () => {
@@ -1953,6 +2011,28 @@ function App() {
     clearClientSession()
     setLaneCrawfordScreen('hub')
     setSession(null)
+  }
+
+  useEffect(() => {
+    if (!session) {
+      return undefined
+    }
+
+    const clearDraftsOnExit = () => {
+      clearAllStoredDrafts()
+    }
+
+    window.addEventListener('pagehide', clearDraftsOnExit)
+    window.addEventListener('beforeunload', clearDraftsOnExit)
+
+    return () => {
+      window.removeEventListener('pagehide', clearDraftsOnExit)
+      window.removeEventListener('beforeunload', clearDraftsOnExit)
+    }
+  }, [session])
+
+  if (!session) {
+    return <ClientGate onAuthenticated={handleAuthenticated} />
   }
 
   if (session.kind === 'admin' && !session.activeClient) {

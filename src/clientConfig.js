@@ -202,6 +202,20 @@ export function getDraftStorageKey(clientId) {
   return `adpreview-draft-${clientId}-v1`
 }
 
+let draftPersistenceAllowed = true
+
+export function isDraftPersistenceAllowed() {
+  return draftPersistenceAllowed
+}
+
+export function enableDraftPersistence() {
+  draftPersistenceAllowed = true
+}
+
+export function disableDraftPersistence() {
+  draftPersistenceAllowed = false
+}
+
 export function clearStoredDraft(clientId) {
   if (typeof window === 'undefined') {
     return
@@ -215,11 +229,23 @@ export function clearAllStoredDrafts() {
     return
   }
 
+  disableDraftPersistence()
+
   for (const client of listClients()) {
     clearStoredDraft(client.id)
   }
 
-  window.localStorage.removeItem('adpreview-draft-v1')
+  const keysToRemove = []
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const key = window.localStorage.key(index)
+    if (key && key.startsWith('adpreview-draft')) {
+      keysToRemove.push(key)
+    }
+  }
+
+  keysToRemove.forEach((key) => {
+    window.localStorage.removeItem(key)
+  })
 }
 
 export function getFacebookBrandName(pageName, client) {
